@@ -13,20 +13,28 @@ export interface DesignElement {
 }
 
 export interface CartItem {
-  id: string
-  type: "custom" | "predesigned"
+  id: string;
+  type: "custom" | "predesigned";
   product: {
-    type?: string
-    color?: string
-    size?: string
-    fabric?: string
-    productId?: number
-    productName?: string
-  }
-  design?: DesignElement[]
-  timestamp: number
-  quantity: number
-  price: number
+    // Thuộc tính cho sản phẩm custom
+    type?: string;
+    color?: string;
+    size?: string;
+    
+    // Thuộc tính cho sản phẩm có sẵn
+    fabric?: string;
+    productId?: number;
+    productName?: string;
+  };
+
+  // --- THÊM MỚI CÁC TRƯỜNG NÀY ---
+  designJSON?: string;      // Chuỗi JSON từ Fabric.js
+  previewImage?: string;    // Ảnh preview dạng Base64 (data URL)
+  // ---------------------------------
+
+  timestamp: number;
+  quantity: number;
+  price: number;
 }
 
 export interface Order {
@@ -83,18 +91,24 @@ export function addToCart(item: Omit<CartItem, "id" | "timestamp">): string {
     timestamp: Date.now(),
   };
 
-  const existingItemIndex = data.activeCart.findIndex(
-    (cartItem) =>
-      JSON.stringify(cartItem.product) === JSON.stringify(newCartItem.product) &&
-      JSON.stringify(cartItem.design) === JSON.stringify(newCartItem.design)
-  );
-
-  if (existingItemIndex > -1) {
-    data.activeCart[existingItemIndex].quantity += newCartItem.quantity;
-  } else {
-    data.activeCart.push(newCartItem);
-  }
+  // Logic kiểm tra sản phẩm trùng lặp cần được điều chỉnh
+  // Sản phẩm tự thiết kế được coi là duy nhất mỗi lần thêm vào giỏ
+  if (newCartItem.type === 'predesigned') {
+    const existingItemIndex = data.activeCart.findIndex(
+      (cartItem) =>
+        cartItem.type === 'predesigned' &&
+        JSON.stringify(cartItem.product) === JSON.stringify(newCartItem.product)
+    );
   
+    if (existingItemIndex > -1) {
+      data.activeCart[existingItemIndex].quantity += newCartItem.quantity;
+      saveUserData(data);
+      return data.activeCart[existingItemIndex].id;
+    }
+  }
+
+  // Nếu là sản phẩm 'custom' hoặc sản phẩm 'predesigned' chưa có, thêm mới
+  data.activeCart.push(newCartItem);
   saveUserData(data);
   return itemId;
 }

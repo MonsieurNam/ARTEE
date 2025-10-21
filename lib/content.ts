@@ -205,3 +205,24 @@ export const FINAL_CTA = {
     placeholder: "Nhập email của bạn",
   },
 }
+
+export const SHIRT_ASSETS: Record<string, { front: string; back: string }> = {
+  tee: {
+    front: '/remove_background/tshirt_front.png',
+    back: '/remove_background/tshirt_back.png',
+  },
+  hoodie: {
+    front: '/remove_background/hoodie_front.png',
+    back: '/remove_background/hoodie_back.png',
+  },
+  polo: {
+    front: '/remove_background/polo_front.png',
+    back: '/remove_background/polo_back.png',
+  },
+  // Thêm sweatshirt nếu có
+  sweatshirt: {
+    // Giả sử dùng chung ảnh với hoodie nếu chưa có
+    front: '/remove_background/hoodie_front.png',
+    back: '/remove_background/hoodie_back.png',
+  },
+};

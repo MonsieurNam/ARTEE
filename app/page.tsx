@@ -6,6 +6,7 @@ import CollectionSection from "@/components/collection-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import FinalCtaSection from "@/components/final-cta-section"
 import Link from "next/link"
+import ContactSection from "@/components/ContactSection"
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
       <BrandStorySection />
       <CollectionSection />
       <HowItWorksSection />
+      <ContactSection />
       <FinalCtaSection />
 
       {/* Floating CTA Button */}
