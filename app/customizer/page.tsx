@@ -27,7 +27,7 @@ export default function CustomizerPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 dark:bg-black flex flex-col">
+    <main className="min-h-screen bg-gray-50 dark:bg-black flex flex-col overflow-hidden">
       <Header />
       
       {/* 
@@ -54,22 +54,23 @@ export default function CustomizerPage() {
         */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0">
           
-          {/* Cột trái: Bảng điều khiển */}
-        <div className="lg:col-span-3 h-full min-h-[500px] lg:min-h-0">
-          <LeftPanel 
-            selectedProduct={selectedProduct}
-            onProductChange={handleProductChangeFromProject} 
-          />
-        </div>
+         {/* Cột trái */}
+          <div className="lg:col-span-3 h-full min-h-[500px] lg:min-h-0">
+            <LeftPanel 
+              selectedProduct={selectedProduct}
+              onProductChange={handleProductChangeFromProject} 
+            />
+          </div>
 
-          {/* Cột giữa: Canvas và Side Selector */}
+          {/* Cột giữa */}
           <div className="lg:col-span-6 flex flex-col items-center justify-start gap-4 h-full">
             <SideSelector />
             <DesignerCanvas selectedProduct={selectedProduct} />
           </div>
 
-          {/* Cột phải: Bảng thuộc tính */}
+          {/* Cột phải */}
           <div className="lg:col-span-3 h-full min-h-[500px] lg:min-h-0">
+            {/* SỬA LỖI: Thêm prop 'onProductChange' vào đây */}
             <RightPanel 
               selectedProduct={selectedProduct}
               onProductChange={handleProductChangeFromProject} 

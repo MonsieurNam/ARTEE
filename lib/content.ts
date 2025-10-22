@@ -112,9 +112,9 @@ export const COLLECTION = {
       name: "Chung nhịp vươn xa",
       description: "Thiết kế dành cho doanh nghiệp và đội nhóm",
       price: 299000,
-      image: "/treo móc.png",
+      image: "/brand_moc.png",
       galleryImages: [
-        { id: 1, url: "/treo móc.png", alt: "CHUNG NHỊP VƯƠN XA front view" },
+        { id: 1, url: "/brand_moc.png", alt: "CHUNG NHỊP VƯƠN XA front view" },
         { id: 2, url: "/áo sếp.png", alt: "CHUNG NHỊP VƯƠN XA back view" },
         // { id: 3, url: "/brand_ngang.png", alt: "CHUNG NHỊP VƯƠN XA side view" },
         // { id: 4, url: "/fabric_detail.png", alt: "Fabric detail" },

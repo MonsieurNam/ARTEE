@@ -35,7 +35,7 @@ export default function AddToCartButton({ selectedProduct }: AddToCartButtonProp
     const designJSON = JSON.stringify(canvas.toJSON());
     const previewImage = canvas.toDataURL({
         format: 'png', quality: 0.8,
-        multiplier: 0
+        multiplier: 0.5
     });
 
     // 2. Gọi hàm addToCart từ hook với cấu trúc mới
