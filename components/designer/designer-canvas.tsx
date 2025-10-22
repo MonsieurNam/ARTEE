@@ -1,10 +1,10 @@
-// FILE: components/designer/designer-canvas.tsx
+// FILE: components/designer/designer-canvas.tsx (Final Clean Version)
 "use client";
 
 import { useCanvas } from '@/hooks/use-canvas';
 import { Card } from "@/components/ui/card";
 import { useDesignStore } from '@/store/design-store';
-import { useEffect, useRef } from 'react'; // Thêm useRef
+import { useEffect } from 'react';
 import { SHIRT_ASSETS } from '@/lib/content';
 import { Image as FabricImage, filters } from 'fabric';
 import { useToast } from "@/components/ui/use-toast";
@@ -24,21 +24,12 @@ export default function DesignerCanvas({ selectedProduct }: DesignerCanvasProps)
   } = useDesignStore();
   const { toast } = useToast();
   
-  // Sử dụng ref để tránh useEffect chạy lại khi các hàm từ store thay đổi
-  const storeActions = useRef({ finishLoadingProject, setLayers, toast });
-
   const productType = selectedProduct.type || 'tee';
   const backgroundImageSrc = SHIRT_ASSETS[productType]?.[activeSide] || SHIRT_ASSETS['tee'].front;
 
-  // useEffect 1: CHỈ VẼ NỀN VÀ CÁC ĐỐI TƯỢNG HIỆN CÓ
+  // useEffect 1: Vẽ lại giao diện
   useEffect(() => {
-    if (!canvas || isLoadingProject) {
-        // Nếu đang trong quá trình tải dự án, KHÔNG làm gì cả
-        // để tránh ghi đè lên kết quả của useEffect 2
-        return;
-    };
-
-    console.log(`%c[Render] Vẽ nền và đối tượng cho mặt: ${activeSide}`, "color: blue");
+    if (!canvas || isLoadingProject) return;
 
     FabricImage.fromURL(backgroundImageSrc, { crossOrigin: 'anonymous' })
       .then((img) => {
@@ -63,19 +54,16 @@ export default function DesignerCanvas({ selectedProduct }: DesignerCanvasProps)
           obj.set('visible', obj.data?.side === activeSide);
         });
         canvas.renderAll();
-      }).catch((err) => { 
-          console.error('Lỗi tải ảnh nền:', err); 
-      });
+      }).catch((err) => console.error('Lỗi tải ảnh nền:', err));
 
   }, [canvas, activeSide, backgroundImageSrc, selectedProduct.color, isLoadingProject]);
 
 
-  // useEffect 2: CHỈ TẢI DỰ ÁN TỪ JSON
+  // useEffect 2: Tải dự án
   useEffect(() => {
     if (isLoadingProject && projectToLoad && canvas) {
-        console.log("%c[Loader] Tải dự án từ JSON...", "color: green; font-weight: bold;");
-
-        // Không cần clear(), loadFromJSON sẽ tự làm
+        // loadFromJSON sẽ xóa canvas, bao gồm cả backgroundImage.
+        // Điều đó không sao, vì useEffect 1 sẽ vẽ lại nó sau khi tải xong.
         canvas.loadFromJSON(projectToLoad, () => {
             const currentSide = useDesignStore.getState().activeSide;
             const objects = canvas.getObjects();
@@ -84,16 +72,14 @@ export default function DesignerCanvas({ selectedProduct }: DesignerCanvasProps)
                 obj.set('visible', obj.data?.side === currentSide);
             });
             
-            // Trigger việc render lại của useEffect 1 với nền áo ĐÚNG
-            // bằng cách gọi finishLoadingProject, sẽ thay đổi isLoadingProject
-            storeActions.current.finishLoadingProject();
-            
-            // Cập nhật các state khác
-            storeActions.current.setLayers(objects);
-            storeActions.current.toast({ title: "Tải thành công", description: `Đã tải lại thiết kế.` });
+            setLayers(objects);
+            finishLoadingProject(); // <-- Tín hiệu này sẽ kích hoạt lại useEffect 1
+            toast({ title: "Tải thành công", description: `Đã tải lại thiết kế.` });
+
+            // Không cần gọi renderAll() ở đây nữa, vì useEffect 1 sẽ làm điều đó.
         });
     }
-  }, [isLoadingProject, projectToLoad, canvas]);
+  }, [isLoadingProject, projectToLoad, canvas, finishLoadingProject, setLayers, toast]);
 
   return (
     <div>

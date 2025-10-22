@@ -124,16 +124,57 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
 
   // Hàm xử lý logic cho cả "Lưu mới" và "Cập nhật"
   const handleSaveOrUpdateProject = () => {
-    if (!canvas) return;
+    if (!canvas) {
+      toast({ title: "Lỗi", description: "Canvas chưa sẵn sàng.", variant: "destructive" });
+      return;
+    }
     // Nếu là lưu mới, cần phải có tên dự án
     if (!activeProjectId && !newProjectName.trim()) {
       toast({ title: "Lỗi", description: "Vui lòng nhập tên cho dự án mới.", variant: "destructive" });
       return;
     }
 
-    const json = JSON.stringify((canvas as any).toJSON(['data']));
+    // =================================================================
+    // BƯỚC 1: Đảm bảo tất cả các đối tượng đều được "nhìn thấy"
+    // =================================================================
+    // Lưu lại trạng thái 'visible' hiện tại của tất cả các đối tượng
+    const originalVisibility: { obj: fabric.Object, visible: boolean }[] = [];
+    canvas.getObjects().forEach(obj => {
+        originalVisibility.push({ obj: obj, visible: obj.visible || false });
+        // Tạm thời làm cho tất cả các đối tượng đều hiển thị
+        obj.set('visible', true);
+    });
+    
+    // =================================================================
+    // BƯỚC 2: Tạo JSON chỉ chứa các đối tượng thiết kế (SỬA LỖI QUYẾT ĐỊNH)
+    // =================================================================
+    // Tự xây dựng một object JSON thay vì dùng canvas.toJSON()
+    // để tránh bao gồm ảnh nền và các thuộc tính không cần thiết khác.
+    const designData = {
+        version: fabric.version,
+        // Dùng map để chuyển từng đối tượng fabric thành object JavaScript thuần túy,
+        // và yêu cầu nó bao gồm thuộc tính 'data' tùy chỉnh của chúng ta.
+        objects: canvas.getObjects().map(obj => obj.toObject(['data']))
+    };
+    const json = JSON.stringify(designData);
+    
+    // =================================================================
+    // BƯỚC 3: Khôi phục lại trạng thái hiển thị ban đầu
+    // =================================================================
+    // Trả các đối tượng về trạng thái ẩn/hiện ban đầu để người dùng không thấy sự thay đổi.
+    originalVisibility.forEach(item => {
+        item.obj.set('visible', item.visible);
+    });
+    // Yêu cầu canvas vẽ lại để giao diện khớp với trạng thái đã khôi phục.
+    canvas.renderAll();
+
+    // (Tùy chọn) Log để kiểm tra kết quả
+    console.log("[Save Panel] Dữ liệu JSON cuối cùng sẽ được lưu:", json);
+
+    // Tạo ảnh xem trước từ trạng thái canvas hiện tại
     const preview = canvas.toDataURL({ format: 'png', quality: 0.1, multiplier: 0.1 });
 
+    // Logic lưu hoặc cập nhật không đổi
     if (activeProjectId) {
       // --- LUỒNG CẬP NHẬT DỰ ÁN HIỆN TẠI ---
       projectLocal.updateProject(activeProjectId, json, preview, selectedProduct);

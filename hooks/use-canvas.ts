@@ -1,9 +1,8 @@
-// hooks/use-canvas.ts
 "use client";
 
 import { useRef, useEffect } from "react";
 import { useDesignStore } from "@/store/design-store";
-import * as fabric from 'fabric';
+import * as fabric from "fabric";
 
 interface UseCanvasProps {
   width: number;
@@ -15,7 +14,7 @@ export const useCanvas = ({ width, height }: UseCanvasProps) => {
   const { setCanvas, setLayers, setSelectedObject } = useDesignStore();
 
   useEffect(() => {
-    if (!canvasRef.current) return; // ✅ tránh null
+    if (!canvasRef.current) return;
 
     const canvas = new fabric.Canvas(canvasRef.current, {
       width,
@@ -23,8 +22,14 @@ export const useCanvas = ({ width, height }: UseCanvasProps) => {
     });
     setCanvas(canvas);
 
-    const updateStore = () => {
+    // 👇 Dùng 'any' để tránh lỗi typing cứng của Fabric v6
+    const updateStore = (e: any) => {
       const objects = canvas.getObjects();
+      console.log(
+        `%c[use-canvas] Event: ${e?.type || "unknown"}. Canvas hiện có ${objects.length} đối tượng.`,
+        "color: green"
+      );
+
       setLayers(objects);
 
       const activeObject = canvas.getActiveObject();
@@ -39,7 +44,8 @@ export const useCanvas = ({ width, height }: UseCanvasProps) => {
     canvas.on("selection:updated", updateStore);
     canvas.on("selection:cleared", updateStore);
 
-    updateStore();
+    // Gọi lần đầu
+    updateStore({ type: "initial_load" });
 
     return () => {
       canvas.off("object:added", updateStore);
@@ -52,7 +58,7 @@ export const useCanvas = ({ width, height }: UseCanvasProps) => {
       setCanvas(null);
       canvas.dispose();
     };
-  }, [width, height, setCanvas, setLayers, setSelectedObject]); // ✅ sửa dependency
+  }, [width, height, setCanvas, setLayers, setSelectedObject]);
 
   return { canvasRef };
 };

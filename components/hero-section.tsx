@@ -11,6 +11,7 @@ const backgroundVideos = [
   "/brand_vid.mp4",
   "/customn_vid.mp4",
   "/hoodie_vid.mp4",
+  "/cfsua.mp4"
 ]
 
 export default function HeroSection() {
