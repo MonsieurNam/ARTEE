@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from "@/components/ui/input";
-import { FileText, ImageIcon, Save, Trash2, Copy, FilePlus } from "lucide-react"; // Thêm icon FilePlus
+import { FileText, ImageIcon, Save, Trash2, Copy, FilePlus } from "lucide-react";
 import LayerItem from "./layer-item";
 import * as projectLocal from '@/lib/services/project-local';
 import { ProjectData } from '@/lib/designer-storage';
@@ -23,13 +23,19 @@ interface LeftPanelProps {
 }
 
 export default function LeftPanel({ selectedProduct, onProductChange }: LeftPanelProps) {
-  const { canvas, layers, activeSide, selectedObject, setActiveSide } = useDesignStore(
+  // Lấy state và actions từ Zustand store, bao gồm cả activeProjectId
+  const { 
+    canvas, layers, activeSide, selectedObject, setActiveSide, 
+    activeProjectId, setActiveProjectId 
+  } = useDesignStore(
     useShallow((state) => ({ 
       canvas: state.canvas, 
       layers: state.layers, 
       activeSide: state.activeSide,
       selectedObject: state.selectedObject,
-      setActiveSide: state.setActiveSide // Lấy action setActiveSide
+      setActiveSide: state.setActiveSide,
+      activeProjectId: state.activeProjectId,
+      setActiveProjectId: state.setActiveProjectId
     }))
   );
   
@@ -44,15 +50,15 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
 
   const refreshProjects = () => setProjects(projectLocal.loadProjects());
 
-  // SỬA LỖI #1: Thêm hàm để tạo dự án mới
+  // Khi tạo thiết kế mới, reset canvas và activeProjectId
   const handleNewProject = () => {
     if (canvas) {
       if (!confirm("Bạn có chắc muốn tạo một thiết kế mới? Mọi thay đổi chưa lưu sẽ bị mất.")) {
         return;
       }
-      canvas.clear(); // Xóa tất cả đối tượng trên canvas
-      // Reset về mặt trước để có trải nghiệm nhất quán
+      canvas.clear();
       setActiveSide('front'); 
+      setActiveProjectId(null); // Reset ID của dự án đang active
       toast({ title: "Bắt đầu thiết kế mới!", description: "Canvas đã được dọn dẹp." });
     }
   };
@@ -116,50 +122,61 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     }
   };
 
-  const handleSaveProject = () => {
-    if (!canvas || !newProjectName.trim()) {
-      toast({ title: "Lỗi", description: "Vui lòng nhập tên dự án.", variant: "destructive" });
+  // Hàm xử lý logic cho cả "Lưu mới" và "Cập nhật"
+  const handleSaveOrUpdateProject = () => {
+    if (!canvas) return;
+    // Nếu là lưu mới, cần phải có tên dự án
+    if (!activeProjectId && !newProjectName.trim()) {
+      toast({ title: "Lỗi", description: "Vui lòng nhập tên cho dự án mới.", variant: "destructive" });
       return;
     }
+
     const json = JSON.stringify((canvas as any).toJSON(['data']));
-    const preview = canvas.toDataURL({ format: 'png', quality: 0.5, multiplier: 0.2 });
-    projectLocal.saveProject(newProjectName, json, preview, selectedProduct);
-    setNewProjectName('');
-    setIsModalOpen(false);
-    refreshProjects();
-    toast({ title: "Thành công!", description: `Đã lưu dự án "${newProjectName}".` });
+    const preview = canvas.toDataURL({ format: 'png', quality: 0.1, multiplier: 0.1 });
+
+    if (activeProjectId) {
+      // --- LUỒNG CẬP NHẬT DỰ ÁN HIỆN TẠI ---
+      projectLocal.updateProject(activeProjectId, json, preview, selectedProduct);
+      refreshProjects();
+      toast({ title: "Thành công!", description: `Đã cập nhật dự án.` });
+    } else {
+      // --- LUỒNG LƯU DỰ ÁN MỚI ---
+      const newProject = projectLocal.saveProject(newProjectName, json, preview, selectedProduct);
+      setActiveProjectId(newProject.id); // Set ID của dự án vừa tạo là active
+      setNewProjectName('');
+      setIsModalOpen(false); // Đóng dialog sau khi lưu
+      refreshProjects();
+      toast({ title: "Thành công!", description: `Đã lưu dự án "${newProjectName}".` });
+    }
   };
   
-  // SỬA LỖI #1 (tiếp): Cải thiện hàm tải dự án
+  // Hàm tải dự án, set activeProjectId
   const handleLoadProject = (project: ProjectData) => {
     if (!canvas) return;
 
-    // 1. Cập nhật state sản phẩm (áo, màu, size)
-    onProductChange(project.product); 
+    if (!confirm(`Bạn có chắc muốn tải dự án "${project.title}"? Mọi thay đổi chưa lưu sẽ bị mất.`)) {
+        return;
+    }
     
-    // 2. Dùng setTimeout để đảm bảo UI (đặc biệt là ảnh nền canvas) có thời gian cập nhật
-    setTimeout(() => {
-        // 3. Xóa sạch canvas cũ trước khi tải dữ liệu mới
-        canvas.clear();
-        
-        // 4. Tải dữ liệu JSON vào canvas
-        canvas.loadFromJSON(project.json, () => {
-            canvas.renderAll();
-            
-            // 5. Đồng bộ lại state Zustand và kích hoạt lại logic hiển thị layer
-            const objects = canvas.getObjects();
-            useDesignStore.getState().setLayers(objects);
-            const currentSide = useDesignStore.getState().activeSide;
-            useDesignStore.getState().setActiveSide(currentSide);
+    // Kích hoạt quá trình tải trong Zustand
+    useDesignStore.getState().startLoadingProject(project.json);
+    
+    // Set ID của dự án đang tải
+    setActiveProjectId(project.id);
 
-            toast({ title: "Tải thành công", description: `Đã tải dự án "${project.title}".` });
-        });
-    }, 100); 
+    // Thay đổi sản phẩm trên canvas
+    onProductChange(project.product);
   };
 
   const handleDeleteProject = (id: string, title: string) => {
     if (confirm(`Bạn có chắc muốn xóa dự án "${title}" không?`)) {
         projectLocal.deleteProject(id);
+        
+        // Nếu dự án đang xóa cũng là dự án đang active, reset ID
+        if (id === activeProjectId) {
+            setActiveProjectId(null);
+        }
+
         refreshProjects();
         toast({ title: "Đã xóa", description: `Dự án "${title}" đã được xóa.` });
     }
@@ -193,20 +210,41 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
         <TabsContent value="projects" className="flex-1 p-4 flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2">
             <Button className="gap-2" onClick={handleNewProject} variant="outline"><FilePlus className="w-4 h-4" /> Thiết kế mới</Button>
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild><Button className="gap-2 w-full" disabled={layers.length === 0}><Save className="w-4 h-4" /> Lưu dự án</Button></DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>Đặt tên cho dự án của bạn</DialogTitle></DialogHeader>
-                <Input placeholder="Ví dụ: Áo nhóm mùa hè..." value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSaveProject()}/>
-                <DialogFooter><Button onClick={handleSaveProject}>Lưu</Button></DialogFooter>
-              </DialogContent>
-            </Dialog>
+            
+            {/* Nút Save/Update động */}
+            {activeProjectId ? (
+              // Nếu đang chỉnh sửa một dự án, hiển thị nút "Cập nhật"
+              <Button className="gap-2 w-full" disabled={layers.length === 0} onClick={handleSaveOrUpdateProject}>
+                <Save className="w-4 h-4" /> Cập nhật dự án
+              </Button>
+            ) : (
+              // Nếu là thiết kế mới, hiển thị nút "Lưu" mở ra Dialog
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2 w-full" disabled={layers.length === 0}>
+                    <Save className="w-4 h-4" /> Lưu dự án
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>Đặt tên cho dự án của bạn</DialogTitle></DialogHeader>
+                  <Input 
+                    placeholder="Ví dụ: Áo nhóm mùa hè..." 
+                    value={newProjectName} 
+                    onChange={(e) => setNewProjectName(e.target.value)} 
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveOrUpdateProject()}
+                  />
+                  <DialogFooter>
+                    <Button onClick={handleSaveOrUpdateProject}>Lưu</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
           <p className="text-sm font-medium text-muted-foreground">Các dự án đã lưu</p>
           <div className="space-y-2 overflow-y-auto flex-1">
             {projects.length > 0 ? (
                 projects.map(p => (
-                    <div key={p.id} className="group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors">
+                    <div key={p.id} className={`group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors ${p.id === activeProjectId ? 'bg-primary/10 border-primary' : ''}`}>
                         <img src={p.previewImage} alt={p.title} className="w-12 h-12 flex-shrink-0 rounded-md object-cover border bg-white cursor-pointer" onClick={() => handleLoadProject(p)}/>
                         <div className="flex-1 min-w-0" onClick={() => handleLoadProject(p)}>
                             <p className="text-sm font-semibold truncate cursor-pointer">{p.title}</p>
