@@ -4,15 +4,26 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ShoppingCart, Zap, Camera, Ruler, Star, Shield, Truck, HeadphonesIcon } from "lucide-react"
+import { ShoppingCart, Zap, Camera, Ruler, Star, Shield, Truck, HeadphonesIcon, X } from "lucide-react"
 import type { Product } from "@/lib/content"
-import { addToCart } from "@/lib/cart"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import ARModal from "@/components/ar-modal"
 import { useCart } from "@/hooks/use-cart"
 import SizeChartModal from "./size-chart-modal"
 import VirtualTryOnModal from "./virtual-try-on-modal"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogOverlay,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog"
+
+// --- THÊM: Import thư viện zoom mới ---
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+
 
 interface ProductDetailsProps {
   product: Product
@@ -36,20 +47,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   const handleAddToCart = () => {
     try {
-      const itemToAdd = {
-        id: "",
-        timestamp: 0,
-        type: "predesigned" as const,
-        product: {
-          productId: product.id,
-          productName: product.name,
-          fabric: selectedFabric.name,
-          size: selectedSize.name,
-        },
-        quantity: quantity,
-        price: unitPrice,
-      }
-
       addToCart({
         type: "predesigned" as const,
         product: {
@@ -58,7 +55,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           fabric: selectedFabric.name,
           size: selectedSize.name,
         },
-        design: [],
         quantity: quantity,
         price: unitPrice,
       })
@@ -86,16 +82,16 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           {/* Main Image with Luxury Frame */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl" />
-            <div 
+            <div
               className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-50 to-neutral-100 aspect-square shadow-2xl border border-neutral-200/50 cursor-zoom-in transition-transform duration-500 hover:scale-[1.02]"
-              onClick={() => setIsImageZoomed(!isImageZoomed)}
+              onClick={() => setIsImageZoomed(true)}
             >
-              <img 
-                src={mainImage} 
-                alt={product.name} 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+              <img
+                src={mainImage}
+                alt={product.name}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              
+
               {/* AR Ready Badge */}
               {product.isARReady && (
                 <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-primary/20">
@@ -107,7 +103,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   </div>
                 </div>
               )}
-              
+
               {/* Hover Overlay */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-300" />
             </div>
@@ -120,14 +116,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 key={img.id}
                 onClick={() => setMainImage(img.url)}
                 className={`aspect-square rounded-xl overflow-hidden border-2 transition-all duration-300 hover:shadow-lg ${
-                  mainImage === img.url 
-                    ? 'border-primary shadow-lg shadow-primary/20 scale-105' 
+                  mainImage === img.url
+                    ? 'border-primary shadow-lg shadow-primary/20 scale-105'
                     : 'border-neutral-200 hover:border-primary/50 hover:scale-105'
                 }`}
               >
-                <img 
-                  src={img.url} 
-                  alt={img.alt} 
+                <img
+                  src={img.url}
+                  alt={img.alt}
                   className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                 />
               </button>
@@ -223,8 +219,8 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   key={size.id}
                   onClick={() => setSelectedSize(size)}
                   className={`p-4 rounded-xl border-2 transition-all duration-300 font-bold text-lg hover:shadow-lg ${
-                    selectedSize.id === size.id 
-                      ? "border-primary bg-primary text-white shadow-lg shadow-primary/30 scale-105" 
+                    selectedSize.id === size.id
+                      ? "border-primary bg-primary text-white shadow-lg shadow-primary/30 scale-105"
                       : "border-neutral-200 hover:border-primary/50 text-foreground bg-white"
                   }`}
                 >
@@ -308,7 +304,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <p className="text-xs text-muted-foreground">Đơn hàng trên 500K</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-blue-50 to-transparent">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-blue-600" />
@@ -318,7 +314,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <p className="text-xs text-muted-foreground">100% chính hãng</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-purple-50 to-transparent">
               <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
                 <HeadphonesIcon className="w-5 h-5 text-purple-600" />
@@ -328,7 +324,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <p className="text-xs text-muted-foreground">Luôn sẵn sàng</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-amber-50 to-transparent">
               <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                 <Star className="w-5 h-5 text-amber-600 fill-amber-600" />
@@ -342,9 +338,79 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </div>
       </div>
 
+      <ImageZoomModal
+        isOpen={isImageZoomed}
+        onClose={() => setIsImageZoomed(false)}
+        imageUrl={mainImage}
+      />
+
       <VirtualTryOnModal isOpen={isARModalOpen} onClose={() => setIsARModalOpen(false)} shirtImageUrl={mainImage} />
       <ARModal isOpen={isARModalOpen} onClose={() => setIsARModalOpen(false)} productName={product.name} />
       <SizeChartModal isOpen={isSizeChartOpen} onClose={() => setIsSizeChartOpen(false)} />
     </>
+  )
+}
+
+interface ImageZoomModalProps {
+  isOpen: boolean
+  onClose: () => void
+  imageUrl: string
+}
+
+function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
+      <DialogContent className="max-w-4xl w-full p-0 bg-transparent border-0 shadow-none">
+        <DialogTitle className="sr-only">Phóng to ảnh sản phẩm</DialogTitle>
+
+        {/* --- THAY THẾ: Thêm TransformWrapper và TransformComponent --- */}
+        <TransformWrapper
+          initialScale={1} // Mức zoom ban đầu
+          minScale={0.5}   // Zoom out tối thiểu
+          maxScale={4}     // Zoom in tối đa
+          wheel={{ step: 0.2 }} // Bước zoom khi cuộn chuột
+          pinch={{ disabled: false }} // Bật/Tắt zoom bằng 2 ngón tay trên mobile
+          // Kích hoạt kéo ảnh khi zoom
+          panning={{ disabled: false }} // <-- Thay thế
+          limitToBounds={true}
+          doubleClick={{ disabled: true }} // Vô hiệu hóa double click để zoom
+        >
+          {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
+            <>
+              {/* Các nút zoom tùy chỉnh (Tùy chọn, bạn có thể bỏ qua nếu không cần) */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 p-2 rounded-full bg-black/50 backdrop-blur-md">
+                <Button variant="ghost" size="icon" onClick={() => zoomIn()} className="text-white hover:bg-white/20">
+                  <span className="sr-only">Zoom In</span>+
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => zoomOut()} className="text-white hover:bg-white/20">
+                  <span className="sr-only">Zoom Out</span>-
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => resetTransform()} className="text-white hover:bg-white/20">
+                  <span className="sr-only">Reset Zoom</span><X className="rotate-45" />
+                </Button>
+              </div>
+              
+              <TransformComponent
+                wrapperStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                contentStyle={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+              >
+                <img
+                  src={imageUrl}
+                  alt="Product Zoom"
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg cursor-grab" // Đảm bảo ảnh không tràn ra khỏi khung
+                  style={{ userSelect: 'none' }} // Ngăn không cho chọn ảnh khi kéo
+                />
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
+        {/* ------------------------------------------------------------- */}
+
+        <DialogClose className="absolute -top-2 -right-2 md:-top-4 md:-right-4 rounded-full bg-white/30 p-2 text-white/80 opacity-80 hover:opacity-100 transition-all backdrop-blur-md">
+          <X className="w-5 h-5" />
+        </DialogClose>
+      </DialogContent>
+    </Dialog>
   )
 }
