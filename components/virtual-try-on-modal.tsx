@@ -8,6 +8,49 @@ import { Card } from "@/components/ui/card"
 import { X, Upload, Loader2, Download, Camera } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
+
+// --- THÊM HÀM MỚI ĐỂ RESIZE ẢNH ---
+/**
+ * Nén và thay đổi kích thước ảnh từ Data URI.
+ * @param dataUri Chuỗi Base64 của ảnh.
+ * @param maxWidth Chiều rộng tối đa.
+ * @param quality Chất lượng JPEG (0.0 - 1.0).
+ * @returns Một Promise trả về Data URI mới đã được nén.
+ */
+async function resizeImage(dataUri: string, maxWidth: number, quality: number = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      // Chỉ resize nếu ảnh lớn hơn
+      if (img.width <= maxWidth) {
+        return resolve(dataUri);
+      }
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) {
+        return reject(new Error('Không thể lấy canvas context'));
+      }
+
+      const scale = maxWidth / img.width;
+      const newWidth = img.width * scale;
+      const newHeight = img.height * scale;
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+      // Chuyển sang JPEG với chất lượng 80% để giảm mạnh kích thước
+      const resizedDataUri = canvas.toDataURL('image/jpeg', quality);
+      resolve(resizedDataUri); 
+    };
+    img.onerror = (err) => reject(err);
+    img.src = dataUri;
+  });
+}
+// --- KẾT THÚC HÀM RESIZE MỚI ---
+
 interface VirtualTryOnModalProps {
   isOpen: boolean
   onClose: () => void
@@ -105,13 +148,17 @@ export default function VirtualTryOnModal({
       const userImageDataUri = userImage; // Đã là Data URI
       const shirtImageDataUri = await ensureDataUri(shirtImageUrl); // Chuyển đổi nếu cần
 
+      const resizedUserImage = await resizeImage(userImageDataUri, 800);
+      // Nén ảnh mockup (áo + thiết kế) xuống tối đa 800px chiều rộng
+      const resizedMockupImage = await resizeImage(shirtImageDataUri, 800);
+
       // 2. Gửi CẢ HAI Data URI đến server
       const response = await fetch("/api/virtual-try-on", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userImage: userImageDataUri,     // (ví dụ: data:image/png;base64,...)
-          mockupImage: shirtImageDataUri, // (ví dụ: data:image/png;base64,...)
+          userImage: resizedUserImage,     // (ví dụ: data:image/png;base64,...)
+          mockupImage: resizedMockupImage, // (ví dụ: data:image/png;base64,...)
           productPose: productPose,
         }),
       });
