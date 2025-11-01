@@ -77,8 +77,8 @@ export default function VirtualTryOnModal({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      toast({ title: "Lỗi", description: "Kích thước ảnh không được vượt quá 5MB", variant: "destructive" })
+    if (file.size > 2 * 1024 * 1024) { // <-- Giảm xuống 2MB
+      toast({ title: "Lỗi", description: "Kích thước ảnh không được vượt quá 2MB", variant: "destructive" })
       return
     }
 

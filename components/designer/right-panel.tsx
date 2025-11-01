@@ -434,7 +434,7 @@ export default function RightPanel({
         <div className="p-4 border-t space-y-2 flex-shrink-0 bg-card">
           <AddToCartButton selectedProduct={selectedProduct} />
 
-          <Button
+          {/* <Button
             className="w-full gap-2"
             variant="secondary"
             onClick={handleOpenVtoModal}
@@ -446,7 +446,7 @@ export default function RightPanel({
               <Zap className="w-4 h-4" />
             )}
             Thử đồ ảo
-          </Button>
+          </Button> */}
 
           {/* Dialog tải xuống */}
           <Dialog>
