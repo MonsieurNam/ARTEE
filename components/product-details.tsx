@@ -112,12 +112,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 {product.isARReady && (
                   <div
                     className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border-primary/20 cursor-pointer"
-                    onClick={() => setIsARModalOpen(true)}
+                    onClick={(e) => {e.stopPropagation(); setIsARModalOpen(true)}}
                   >
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-purple-600" />
                       <span className="text-sm font-semibold bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent">
-                        AR Ready
+                        Hướng dẫn xem AR
                       </span>
                     </div>
                   </div>

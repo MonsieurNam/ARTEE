@@ -2,7 +2,7 @@
 "use client";
 
 import { useDesignStore } from "@/store/design-store";
-import { useShallow } from 'zustand/react/shallow'; // Import useShallow
+import { useShallow } from 'zustand/react/shallow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import ProductSelector from "@/components/product-selector";
@@ -13,7 +13,7 @@ import * as fabric from "fabric";
 import { useState, useEffect } from "react";
 import AddToCartButton from "./add-to-cart-button";
 import { Button } from "../ui/button";
-import { Download, Phone, Loader2, Zap } from "lucide-react"; // Thêm icon Zap
+import { Download, Phone, Loader2, Zap } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,7 @@ import {
 } from "../ui/dialog";
 import { useToast } from "../ui/use-toast";
 import { SHIRT_ASSETS } from "@/lib/content";
-import VirtualTryOnModal from "../virtual-try-on-modal"; // Import Modal VTO
+import VirtualTryOnModal from "../virtual-try-on-modal";
 
 interface RightPanelProps {
   selectedProduct: any;
@@ -38,11 +38,14 @@ interface LocalAttributes {
   fill: string;
 }
 
+// --- KÍCH THƯỚC CANVAS CHÍNH (GỐC) ---
+const CANVAS_BASE_WIDTH = 400;
+const CANVAS_BASE_HEIGHT = 500;
+
 export default function RightPanel({
   selectedProduct,
   onProductChange,
 }: RightPanelProps) {
-  // --- CẬP NHẬT HOOK: Thêm activeSide và dùng useShallow ---
   const { canvas, selectedObject, layers, activeSide } = useDesignStore(
     useShallow((state) => ({
       canvas: state.canvas,
@@ -51,17 +54,14 @@ export default function RightPanel({
       activeSide: state.activeSide,
     }))
   );
-  // --- KẾT THÚC CẬP NHẬT HOOK ---
 
   const { toast } = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
   
-  // --- THÊM STATE MỚI CHO VTO ---
   const [isVtoModalOpen, setIsVtoModalOpen] = useState(false);
   const [vtoImageUrl, setVtoImageUrl] = useState<string | null>(null);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  // --- KẾT THÚC THÊM STATE ---
-
+  
   const [attributes, setAttributes] = useState<LocalAttributes>({
     text: "",
     scale: 1,
@@ -81,6 +81,7 @@ export default function RightPanel({
     }
   }, [selectedObject]);
 
+  // ... (các hàm updateProperty, handleAttributeChange, commitChanges không đổi) ...
   const updateProperty = (prop: string, value: any) => {
     if (canvas && selectedObject) {
       selectedObject.set(prop as keyof fabric.Object, value);
@@ -105,19 +106,19 @@ export default function RightPanel({
     }
   };
 
-  // --- THÊM HÀM MỚI: XỬ LÝ MỞ MODAL VTO ---
-  const handleOpenVtoModal = () => {
+
+  // --- HÀM MỞ VTO ĐÃ ĐƯỢC CẬP NHẬT HOÀN TOÀN ---
+  const handleOpenVtoModal = async () => {
     if (!canvas) {
       toast({ title: "Lỗi", description: "Canvas chưa sẵn sàng.", variant: "destructive" });
       return;
     }
 
-    // Kiểm tra xem mặt (side) hiện tại có layer nào không
     const hasLayersOnThisSide = layers.some(l => l.side === activeSide);
-    if (!hasLayersOnThisSide) {
+    if (!hasLayersOnThisSide && activeSide === 'front') { // Chỉ kiểm tra mặt trước
        toast({
-         title: "Mặt áo trống",
-         description: `Vui lòng thêm chi tiết vào ${activeSide === 'front' ? 'mặt trước' : 'mặt sau'} trước khi thử đồ.`,
+         title: "Mặt trước trống",
+         description: `Vui lòng thêm chi tiết vào mặt trước trước khi thử đồ.`,
          variant: "destructive"
        });
        return;
@@ -125,19 +126,110 @@ export default function RightPanel({
 
     setIsGeneratingPreview(true);
     
-    // Logic chụp ảnh canvas hiện tại (giống logic AddToCart)
-    // Canvas đã tự động ẩn/hiện các layer theo activeSide (nhờ logic trong designer-canvas.tsx)
-    const imageDataUrl = canvas.toDataURL({
-      format: 'png',
-      quality: 0.9, // Chất lượng cao hơn 1 chút cho VTO
-      multiplier: 1.0 // Giữ nguyên kích thước 400x500
+    // --- TĂNG ĐỘ PHÂN GIẢI ---
+    const PREVIEW_WIDTH = 800;  // Tăng từ 400
+    const PREVIEW_HEIGHT = 1000; // Tăng từ 500
+
+    // Tính toán tỷ lệ scale
+    const scaleX = PREVIEW_WIDTH / CANVAS_BASE_WIDTH;   // = 2
+    const scaleY = PREVIEW_HEIGHT / CANVAS_BASE_HEIGHT; // = 2
+    // --- KẾT THÚC TĂNG ĐỘ PHÂN GIẢI ---
+
+    // 1. Tạo canvas ảo
+    const virtualCanvas = new fabric.StaticCanvas(undefined, {
+      width: PREVIEW_WIDTH,
+      height: PREVIEW_HEIGHT,
     });
 
-    setVtoImageUrl(imageDataUrl);
-    setIsVtoModalOpen(true);
-    setIsGeneratingPreview(false);
+    // 2. Lấy JSON thiết kế
+    const designData = {
+      objects: canvas.getObjects().map(obj => obj.toObject(['data'])),
+    };
+
+    try {
+      // 3. Nạp JSON vào canvas ảo
+      await virtualCanvas.loadFromJSON(designData);
+
+      // --- THÊM BƯỚC QUAN TRỌNG: SCALE CÁC ĐỐI TƯỢNG ---
+      virtualCanvas.getObjects().forEach(obj => {
+        obj.set({
+          left: (obj.left ?? 0) * scaleX,
+          top: (obj.top ?? 0) * scaleY,
+          scaleX: (obj.scaleX ?? 1) * scaleX,
+          scaleY: (obj.scaleY ?? 1) * scaleY,
+        });
+        obj.setCoords();
+      });
+      // --- KẾT THÚC BƯỚC SCALE ---
+
+      // 4. Tải ảnh nền (áo)
+      const productType = selectedProduct.type || 'tee';
+      const backgroundImageSrc =
+        SHIRT_ASSETS[productType]?.[activeSide] || SHIRT_ASSETS['tee'].front;
+      
+      const img = await fabric.Image.fromURL(backgroundImageSrc, { crossOrigin: 'anonymous' });
+
+      // 5. Áp filter màu
+      const colorFilter = new fabric.filters.BlendColor({
+        color: selectedProduct.color,
+        mode: 'tint',
+        alpha: 0.9,
+      });
+      img.filters?.push(colorFilter);
+      img.applyFilters();
+
+      // 6. Scale và đặt ảnh nền
+      const canvasAspect = PREVIEW_WIDTH / PREVIEW_HEIGHT;
+      const imgAspect = img.width! / img.height!;
+      const bgScaleFactor =
+        canvasAspect > imgAspect
+          ? PREVIEW_HEIGHT / img.height!
+          : PREVIEW_WIDTH / img.width!;
+      const finalBgScale = bgScaleFactor * 0.9;
+
+      img.set({
+        scaleX: finalBgScale,
+        scaleY: finalBgScale,
+        originX: 'center',
+        originY: 'center',
+        left: PREVIEW_WIDTH / 2,
+        top: PREVIEW_HEIGHT / 2,
+      });
+      virtualCanvas.backgroundImage = img;
+
+      // 7. Ẩn/hiện đối tượng theo 'activeSide'
+      virtualCanvas.getObjects().forEach(obj => {
+        obj.set('visible', obj.data?.side === activeSide);
+      });
+
+      // 8. Chờ render
+      await new Promise<void>((resolve) => {
+        virtualCanvas.renderAll();
+        // Dùng setTimeout nhỏ để đảm bảo render hoàn tất
+        setTimeout(() => resolve(), 50); 
+      });
+
+      // 9. Xuất Data URI
+      const imageDataUrl = virtualCanvas.toDataURL({
+        format: 'png',
+        quality: 0.9, // Giữ chất lượng tốt
+        multiplier: 1,
+      });
+
+      // 10. Mở Modal
+      setVtoImageUrl(imageDataUrl);
+      setIsVtoModalOpen(true);
+
+    } catch (error) {
+      console.error("Lỗi khi tạo preview VTO:", error);
+      toast({ title: "Lỗi", description: "Không thể tạo ảnh xem trước.", variant: "destructive"});
+    } finally {
+      virtualCanvas.dispose();
+      setIsGeneratingPreview(false);
+    }
   };
-  // --- KẾT THÚC HÀM MỚI ---
+  // --- KẾT THÚC HÀM VTO MỚI ---
+
 
   // HÀM TẢI THIẾT KẾ (FABRIC V6) - (Không thay đổi)
   const handleDownloadDesign = async (side: 'front' | 'back') => {
@@ -149,27 +241,25 @@ export default function RightPanel({
     setIsDownloading(true);
 
     const fileName = `ARTEE_Design_${side}_${Date.now()}.png`;
-    const ORIGINAL_WIDTH = 400;
-    const ORIGINAL_HEIGHT = 500;
+    const ORIGINAL_WIDTH = CANVAS_BASE_WIDTH;
+    const ORIGINAL_HEIGHT = CANVAS_BASE_HEIGHT;
     const HI_RES_WIDTH = 2000;
     const HI_RES_HEIGHT = 2500;
     const scaleX = HI_RES_WIDTH / ORIGINAL_WIDTH;
     const scaleY = HI_RES_HEIGHT / ORIGINAL_HEIGHT;
-    // Lưu dữ liệu canvas hiện tại
+    
     const designData = {
       objects: canvas.getObjects().map(obj => obj.toObject(['data'])),
     };
-    // Tạo canvas ảo độ phân giải cao
+    
     const virtualCanvas = new fabric.StaticCanvas(undefined, {
       width: HI_RES_WIDTH,
       height: HI_RES_HEIGHT,
     });
     try {
       console.log(`[v6] Bắt đầu quá trình tải mặt ${side}.`);
-      // BƯỚC 1: Nạp JSON và scale lại đối tượng
       await virtualCanvas.loadFromJSON(designData);
-      console.log(`[v6] Nạp xong JSON. Có ${virtualCanvas.getObjects().length} đối tượng.`);
-
+      
       virtualCanvas.getObjects().forEach(obj => {
         obj.set({
           left: (obj.left ?? 0) * scaleX,
@@ -179,15 +269,14 @@ export default function RightPanel({
         });
         obj.setCoords();
       });
-      console.log("[v6] Đã scale và hiệu chỉnh toạ độ đối tượng.");
-      // BƯỚC 2: Tải và đặt ảnh nền (Fabric v6)
+      
       console.log("[v6] Bắt đầu tải ảnh nền...");
       const productType = selectedProduct.type || 'tee';
       const backgroundImageSrc =
         SHIRT_ASSETS[productType]?.[side] || SHIRT_ASSETS['tee'].front;
       const img = await fabric.Image.fromURL(backgroundImageSrc, { crossOrigin: 'anonymous' });
       console.log("[v6] Tải ảnh nền thành công.");
-      // Áp màu áo
+      
       const colorFilter = new fabric.filters.BlendColor({
         color: selectedProduct.color,
         mode: 'tint',
@@ -196,7 +285,6 @@ export default function RightPanel({
       img.filters?.push(colorFilter);
       img.applyFilters();
 
-      // Tính tỷ lệ scale ảnh nền
       const canvasAspect = HI_RES_WIDTH / HI_RES_HEIGHT;
       const imgAspect = img.width! / img.height!;
       const bgScaleFactor =
@@ -204,7 +292,7 @@ export default function RightPanel({
           ? HI_RES_HEIGHT / img.height!
           : HI_RES_WIDTH / img.width!;
       const finalBgScale = bgScaleFactor * 0.9;
-      // Đặt vị trí ảnh nền
+      
       img.scaleX = finalBgScale;
       img.scaleY = finalBgScale;
       img.originX = 'center';
@@ -215,21 +303,20 @@ export default function RightPanel({
       virtualCanvas.backgroundImage = img;
       virtualCanvas.requestRenderAll();
       console.log("[v6] Đặt ảnh nền thành công.");
-
-      // BƯỚC 3: Ẩn/hiện đối tượng và chờ render
+      
       virtualCanvas.getObjects().forEach(obj => {
         obj.set('visible', obj.data?.side === side);
       });
       console.log("[v6] Đã ẩn/hiện đối tượng theo mặt áo.");
 
       await new Promise<void>((resolve) => {
-        virtualCanvas.requestRenderAll();
+        virtualCanvas.renderAll();
         requestAnimationFrame(() => {
           console.log("[v6] Canvas đã render xong (requestAnimationFrame).");
           resolve();
         });
       });
-      // BƯỚC 4: Xuất file PNG
+      
       const dataUrl = virtualCanvas.toDataURL({
         format: 'png',
         quality: 1.0,
@@ -256,10 +343,10 @@ export default function RightPanel({
 
 
   // =============================
-  // GIAO DIỆN (UI)
+  // GIAO DIỆN (UI) - Không thay đổi
   // =============================
   return (
-    <> {/* Thêm Fragment để bọc Modal */}
+    <> 
       <Card className="h-full shadow-md flex flex-col">
         <Tabs
           defaultValue="product"
@@ -347,12 +434,11 @@ export default function RightPanel({
         <div className="p-4 border-t space-y-2 flex-shrink-0 bg-card">
           <AddToCartButton selectedProduct={selectedProduct} />
 
-          {/* --- THÊM NÚT VTO MỚI --- */}
           <Button
             className="w-full gap-2"
             variant="secondary"
             onClick={handleOpenVtoModal}
-            disabled={isGeneratingPreview || layers.length === 0}
+            disabled={isGeneratingPreview || (layers.filter(l => l.side === 'front').length === 0)}
           >
             {isGeneratingPreview ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -361,7 +447,6 @@ export default function RightPanel({
             )}
             Thử đồ ảo
           </Button>
-          {/* --- KẾT THÚC NÚT VTO --- */}
 
           {/* Dialog tải xuống */}
           <Dialog>
@@ -436,14 +521,12 @@ export default function RightPanel({
         </div>
       </Card>
 
-      {/* --- THÊM MODAL VTO MỚI --- */}
       <VirtualTryOnModal
         isOpen={isVtoModalOpen}
         onClose={() => setIsVtoModalOpen(false)}
         shirtImageUrl={vtoImageUrl}
-        productPose={activeSide} // Truyền mặt (side) hiện tại
+        productPose={activeSide} 
       />
-      {/* --- KẾT THÚC THÊM MODAL --- */}
     </>
   );
 }

@@ -10,7 +10,7 @@ const PRODUCT_TYPES = [
 ]
 
 const COLORS = [
-  { id: "black", name: "Đen", hex: "#000000" },
+  { id: "pink", name: "Hồng", hex: "#F472B6" },
   { id: "white", name: "Trắng", hex: "#FFFFFF" },
   { id: "navy", name: "Navy", hex: "#001F3F" },
   { id: "gray", name: "Xám", hex: "#808080" },

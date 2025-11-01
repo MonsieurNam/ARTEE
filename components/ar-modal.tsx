@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, Download, Copy, QrCode } from "lucide-react"
+import { X, Download, Copy, QrCode } from "lucide-react" // Bỏ 'Copy' vì không cần nữa
 import { useToast } from "@/hooks/use-toast"
 
 interface ARModalProps {
@@ -14,15 +14,18 @@ interface ARModalProps {
 }
 
 export default function ARModal({ isOpen, onClose, productName = "ARTEE Design" }: ARModalProps) {
-  const [qrCode, setQrCode] = useState<string | null>(null)
+  // --- BỎ STATE VÀ EFFECT CỦA QR CODE ĐỘNG ---
+  // const [qrCode, setQrCode] = useState<string | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    if (isOpen && !qrCode) {
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://artivive.com/app`
-      setQrCode(qrUrl)
-    }
-  }, [isOpen, qrCode])
+  // useEffect(() => {
+  //   if (isOpen && !qrCode) {
+  //     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https://artivive.com/app`
+  //     setQrCode(qrUrl)
+  //   }
+  // }, [isOpen, qrCode])
+  // --- KẾT THÚC BỎ ---
+
 
   const downloadMarker = () => {
     // Create a canvas with the product image as marker
@@ -73,13 +76,15 @@ export default function ARModal({ isOpen, onClose, productName = "ARTEE Design" 
     })
   }
 
-  const copyArtiviveLink = () => {
-    navigator.clipboard.writeText("https://artivive.com/app")
-    toast({
-      title: "Thành công",
-      description: "Link Artivive đã được sao chép",
-    })
-  }
+  // --- BỎ HÀM COPY LINK ---
+  // const copyArtiviveLink = () => {
+  //   navigator.clipboard.writeText("https://artivive.com/app")
+  //   toast({
+  //     title: "Thành công",
+  //     description: "Link Artivive đã được sao chép",
+  //   })
+  // }
+  // --- KẾT THÚC BỎ ---
 
   if (!isOpen) return null
 
@@ -103,8 +108,8 @@ export default function ARModal({ isOpen, onClose, productName = "ARTEE Design" 
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
             <h3 className="font-semibold text-blue-900 mb-2">Phép Màu - Công nghệ AR</h3>
             <p className="text-sm text-blue-800 mb-3">
-              Công nghệ Augmented Reality (AR) của Artivive sẽ làm sống dậy thiết kế của bạn. Khi bạn soi camera vào
-              hình ảnh marker, thiết kế sẽ hiện lên với hiệu ứng 3D tuyệt đẹp.
+              Công nghệ Augmented Reality (AR) của Artivive sẽ làm sống dậy thiết kế. Khi bạn soi camera vào
+              hình ảnh áo, thiết kế sẽ hiện lên với hiệu ứng 3D tuyệt đẹp.
             </p>
             <p className="text-sm text-blue-800">
               Đây là cách hoàn hảo để trải nghiệm nghệ thuật và câu chuyện đằng sau mỗi thiết kế ARTEE.
@@ -121,11 +126,7 @@ export default function ARModal({ isOpen, onClose, productName = "ARTEE Design" 
               </li>
               <li className="font-medium text-foreground mt-3">
                 Quét mã QR bên dưới
-                <p className="text-xs text-muted-foreground ml-6 mt-1">Hoặc truy cập: artivive.com/app</p>
-              </li>
-              <li className="font-medium text-foreground mt-3">
-                Tải hình ảnh Marker
-                <p className="text-xs text-muted-foreground ml-6 mt-1">Nhấn nút "Tải Marker" bên dưới</p>
+                <p className="text-xs text-muted-foreground ml-6 mt-1">Chọn mã phù hợp cho điện thoại của bạn</p>
               </li>
               <li className="font-medium text-foreground mt-3">
                 Soi camera vào hình ảnh
@@ -134,42 +135,54 @@ export default function ARModal({ isOpen, onClose, productName = "ARTEE Design" 
             </ol>
           </div>
 
-          {/* QR Code Section */}
+          
+          {/* --- CẬP NHẬT PHẦN QR CODE --- */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <QrCode className="w-5 h-5 text-primary" />
               <h3 className="font-semibold text-foreground">Mã QR - Tải Artivive</h3>
             </div>
-            <div className="flex flex-col items-center gap-4 bg-white p-6 rounded-lg border border-border">
-              {qrCode && (
+           
+            {/* Thay thế div cũ bằng grid 2 cột */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-lg border border-border">
+              {/* Android QR Code */}
+              <div className="flex flex-col items-center gap-3">
                 <img
-                  src={qrCode || "/placeholder.svg"}
-                  alt="Artivive QR Code"
-                  className="w-56 h-56 border-4 border-primary rounded-lg"
+                  src="/QR_Android.png" // Lấy từ thư mục /public
+                  alt="Artivive for Android QR Code"
+                  className="w-48 h-48 border-4 border-neutral-200 rounded-lg"
                 />
-              )}
-              <div className="text-center">
-                <p className="text-sm font-medium text-foreground mb-2">Quét mã QR để tải Artivive</p>
-                <p className="text-xs text-muted-foreground">Hoặc sao chép link bên dưới</p>
+                <p className="text-sm font-semibold text-foreground">Tải cho Android</p>
+                <p className="text-xs text-muted-foreground">(Google Play Store)</p>
               </div>
-              <Button onClick={copyArtiviveLink} variant="outline" className="gap-2 bg-transparent">
-                <Copy className="w-4 h-4" />
-                Sao chép link: artivive.com/app
-              </Button>
+              
+              {/* iOS QR Code */}
+              <div className="flex flex-col items-center gap-3">
+                <img
+                  src="/QR_IOS.png" // Lấy từ thư mục /public
+                  alt="Artivive for iOS QR Code"
+                  className="w-48 h-48 border-4 border-neutral-200 rounded-lg"
+                />
+                <p className="text-sm font-semibold text-foreground">Tải cho iOS (iPhone)</p>
+                <p className="text-xs text-muted-foreground">(Apple App Store)</p>
+              </div>
             </div>
+            {/* --- KẾT THÚC CẬP NHẬT --- */}
           </div>
 
+
           {/* Marker Download Section */}
-          <div className="space-y-3">
+          {/* <div className="space-y-3">
             <h3 className="font-semibold text-foreground">Hình ảnh Marker</h3>
             <p className="text-sm text-muted-foreground">
-              Tải hình ảnh marker này để sử dụng với ứng dụng Artivive. Soi camera vào hình ảnh để xem thiết kế 3D.
+              Tải hình ảnh marker này để sử dụng với ứng dụng Artivive.
+              Soi camera vào hình ảnh để xem thiết kế 3D.
             </p>
             <Button onClick={downloadMarker} className="w-full gap-2 bg-primary hover:bg-primary/90 text-white py-6">
               <Download className="w-4 h-4" />
               Tải Hình ảnh Marker
             </Button>
-          </div>
+          </div> */}
 
           {/* Product Info */}
           <div className="bg-secondary/50 rounded-lg p-4 border border-border">
