@@ -9,5 +9,4 @@ export const PRODUCT_NAMES: Record<string, string> = {
   tee: "T-Shirt",
   hoodie: "Hoodie",
   polo: "Polo",
-  sweatshirt: "Sweatshirt",
 }

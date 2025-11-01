@@ -4,7 +4,7 @@ export const HERO_CONTENT = {
   subtitle: "Thiết kế áo in theo yêu cầu với công nghệ AR tiên tiến - Nghệ Thuật Sống Động trên Mỗi Chiếc Áo",
   description:
     "ARTEE là nơi nghệ thuật gặp gỡ công nghệ AR, biến mỗi chiếc áo thành một tác phẩm sống động. Chúng tôi mang đến trải nghiệm thời trang tương tác – sáng tạo, bền vững và đầy cảm hứng cho khách hàng tại Việt Nam.",
-}
+};
 
 export const BRAND_STORY = {
   title: "ABOUT ARTEE",
@@ -23,7 +23,7 @@ export const BRAND_STORY = {
       description: "Trải nghiệm tương tác chưa từng có — nghệ thuật sống động ngay trên chiếc áo bạn mặc.",
     },
   ],
-}
+};
 
 export interface ProductOption {
   id: string
@@ -37,8 +37,15 @@ export interface Product {
   description: string
   price: number
   image: string
-  galleryImages: { id: number; url: string; alt: string }[]
-  isARReady: boolean;
+  // --- THAY ĐỔI Ở ĐÂY ---
+  galleryImages: {
+    id: number
+    url: string
+    alt: string
+    pose: 'front' | 'back' // Thêm thuộc tính pose
+  }[]
+  // --- KẾT THÚC THAY ĐỔI ---
+  isARReady: boolean
   story: string
   fabrics: ProductOption[]
   sizes: ProductOption[]
@@ -56,10 +63,10 @@ export const COLLECTION = {
       price: 299000,
       image: "/hoodie_sau.png",
       galleryImages: [
-        { id: 1, url: "/hoodie_truoc.png", alt: "Ấn Sen front view" },
-        { id: 2, url: "/hoodie_sau.png", alt: "Ấn Sen back view" },
-        // { id: 3, url: "/hoodie_side.png", alt: "T-Shirt side view" },
-        // { id: 4, url: "/fabric_detail.png", alt: "Fabric detail" },
+        // --- CẬP NHẬT DỮ LIỆU ---
+        { id: 1, url: "/hoodie_truoc.png", alt: "Ấn Sen front view", pose: "front" },
+        { id: 2, url: "/hoodie_sau.png", alt: "Ấn Sen back view", pose: "back" },
+        // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: false,
       story:
@@ -85,10 +92,10 @@ export const COLLECTION = {
       price: 299000,
       image: "/cafe_sau.png",
       galleryImages: [
-        { id: 1, url: "/cafe_truoc.png", alt: "Nạp Cảm Hứng front view" },
-        { id: 2, url: "/cafe_sau.png", alt: "Nạp Cảm Hứng back view" },
-        // { id: 3, url: "/cafe_side.png", alt: "T-Shirt side view" },
-        // { id: 4, url: "/fabric_detail.png", alt: "Fabric detail" },
+        // --- CẬP NHẬT DỮ LIỆU ---
+        { id: 1, url: "/cafe_truoc.png", alt: "Nạp Cảm Hứng front view", pose: "front" },
+        { id: 2, url: "/cafe_sau.png", alt: "Nạp Cảm Hứng back view", pose: "back" },
+        // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
       story:
@@ -114,10 +121,10 @@ export const COLLECTION = {
       price: 299000,
       image: "/brand_moc.png",
       galleryImages: [
-        { id: 1, url: "/brand_moc.png", alt: "CHUNG NHỊP VƯƠN XA front view" },
-        { id: 2, url: "/áo sếp.png", alt: "CHUNG NHỊP VƯƠN XA back view" },
-        // { id: 3, url: "/brand_ngang.png", alt: "CHUNG NHỊP VƯƠN XA side view" },
-        // { id: 4, url: "/fabric_detail.png", alt: "Fabric detail" },
+        // --- CẬP NHẬT DỮ LIỆU ---
+        { id: 1, url: "/brand_moc.png", alt: "CHUNG NHỊP VƯƠN XA front view", pose: "front" },
+        { id: 2, url: "/áo sếp.png", alt: "CHUNG NHỊP VƯƠN XA back view", pose: "back" },
+        // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
       story:
@@ -143,10 +150,10 @@ export const COLLECTION = {
       price: 299000,
       image: "/custom_sau.png",
       galleryImages: [
-        { id: 1, url: "/custom_truoc.png", alt: "Hồi ức đáng nhớ front view" },
-        { id: 2, url: "/custom_sau.png", alt: "Hồi ức đáng nhớ back view" },
-        // { id: 3, url: "/custom_ngang.png", alt: "Hồi ức đáng nhớ side view" },
-        // { id: 4, url: "/fabric_detail.png", alt: "Fabric detail" },
+        // --- CẬP NHẬT DỮ LIỆU ---
+        { id: 1, url: "/custom_truoc.png", alt: "Hồi ức đáng nhớ front view", pose: "front" },
+        { id: 2, url: "/custom_sau.png", alt: "Hồi ức đáng nhớ back view", pose: "back" },
+        // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
       story:
@@ -166,7 +173,7 @@ export const COLLECTION = {
       ],
     }
   ] as Product[],
-}
+};
 
 export const HOW_IT_WORKS = {
   title: "Cách thức hoạt động",
@@ -188,7 +195,7 @@ export const HOW_IT_WORKS = {
       description: "Xem thiết kế 3D của bạn xuất hiện trong thế giới thực",
     },
   ],
-}
+};
 
 export const FINAL_CTA = {
   title: "Bắt đầu hành trình sáng tạo của bạn",
@@ -204,7 +211,7 @@ export const FINAL_CTA = {
     description: "Nhận thông báo về bộ sưu tập mới và ưu đãi độc quyền",
     placeholder: "Nhập email của bạn",
   },
-}
+};
 
 export const SHIRT_ASSETS: Record<string, { front: string; back: string }> = {
   tee: {
@@ -218,11 +225,5 @@ export const SHIRT_ASSETS: Record<string, { front: string; back: string }> = {
   polo: {
     front: '/remove_background/polo_front.png',
     back: '/remove_background/polo_back.png',
-  },
-  // Thêm sweatshirt nếu có
-  sweatshirt: {
-    // Giả sử dùng chung ảnh với hoodie nếu chưa có
-    front: '/remove_background/hoodie_front.png',
-    back: '/remove_background/hoodie_back.png',
   },
 };

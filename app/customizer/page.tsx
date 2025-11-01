@@ -9,7 +9,7 @@ import LeftPanel from "@/components/designer/left-panel";
 import RightPanel from "@/components/designer/right-panel";
 import DesignerCanvas from "@/components/designer/designer-canvas";
 import SideSelector from "@/components/designer/side-selector";
-
+import { ZoomControls } from "@/components/designer/zoom-controls"; 
 interface SelectedProduct {
   type: string;
   color: string;
@@ -64,8 +64,21 @@ export default function CustomizerPage() {
 
           {/* Cột giữa */}
           <div className="lg:col-span-6 flex flex-col items-center justify-start gap-4 h-full">
-            <SideSelector />
+            
+            {/* Cụm điều khiển (SideSelector và Zoom) */}
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <SideSelector />
+              <ZoomControls /> {/* <-- THÊM COMPONENT MỚI Ở ĐÂY */}
+            </div>
+
+            {/* Canvas */}
             <DesignerCanvas selectedProduct={selectedProduct} />
+
+            {/* Hướng dẫn (Hint) sử dụng */}
+            <p className="text-xs text-muted-foreground mt-2">
+              *Cuộn chuột để Zoom. Giữ phím <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-300 rounded-md">Alt</kbd> để kéo thả canvas.
+            </p>
+
           </div>
 
           {/* Cột phải */}

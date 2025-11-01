@@ -23,7 +23,6 @@ interface LeftPanelProps {
 }
 
 export default function LeftPanel({ selectedProduct, onProductChange }: LeftPanelProps) {
-  // Lấy state và actions từ Zustand store, bao gồm cả activeProjectId
   const { 
     canvas, layers, activeSide, selectedObject, setActiveSide, 
     activeProjectId, setActiveProjectId 
@@ -50,7 +49,6 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
 
   const refreshProjects = () => setProjects(projectLocal.loadProjects());
 
-  // Khi tạo thiết kế mới, reset canvas và activeProjectId
   const handleNewProject = () => {
     if (canvas) {
       if (!confirm("Bạn có chắc muốn tạo một thiết kế mới? Mọi thay đổi chưa lưu sẽ bị mất.")) {
@@ -58,7 +56,7 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
       }
       canvas.clear();
       setActiveSide('front'); 
-      setActiveProjectId(null); // Reset ID của dự án đang active
+      setActiveProjectId(null);
       toast({ title: "Bắt đầu thiết kế mới!", description: "Canvas đã được dọn dẹp." });
     }
   };
@@ -67,8 +65,8 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     if (!canvas) return;
     const text = new fabric.IText('Nhập chữ...', {
       left: 50, top: 100, fontFamily: 'Arial', fontSize: 40, fill: '#333333',
-      data: { id: `text-${Date.now()}`, side: activeSide }
     });
+    (text as any).data = { id: `text-${Date.now()}`, side: activeSide };
     canvas.add(text);
     canvas.setActiveObject(text);
     canvas.renderAll();
@@ -84,7 +82,7 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
           try {
             const img = await fabric.Image.fromURL(event.target.result as string, { crossOrigin: 'anonymous' });
             img.scaleToWidth(150);
-            img.set({ data: { id: `image-${Date.now()}`, side: activeSide } });
+            (img as any).data = { id: `image-${Date.now()}`, side: activeSide };
             canvas.add(img);
             canvas.centerObject(img);
             canvas.setActiveObject(img);
@@ -99,7 +97,7 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
 
   const handleDeleteLayer = (id: string) => {
     if (!canvas) return;
-    const objectsToDelete = canvas.getObjects().filter(obj => obj.data?.id === id);
+    const objectsToDelete = canvas.getObjects().filter(obj => (obj as any).data?.id === id);
     objectsToDelete.forEach(obj => canvas.remove(obj));
     canvas.discardActiveObject();
     canvas.renderAll();
@@ -107,14 +105,15 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
 
   const handleDuplicateLayer = async (id: string) => {
     if (!canvas) return;
-    const objectToClone = canvas.getObjects().find(obj => obj.data?.id === id);
+    const objectToClone = canvas.getObjects().find(obj => (obj as any).data?.id === id);
     if (objectToClone) {
       try {
         const cloned = await objectToClone.clone(['data']);
-        cloned.set({
-          left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20,
-          data: { ...cloned.data, id: `${cloned.type || 'object'}-${Date.now()}` }
+        (cloned as any).set({
+          left: (cloned.left || 0) + 20, 
+          top: (cloned.top || 0) + 20,
         });
+        (cloned as any).data = { ...(cloned as any).data, id: `${cloned.type || 'object'}-${Date.now()}` };
         canvas.add(cloned);
         canvas.setActiveObject(cloned);
         canvas.renderAll();
@@ -122,104 +121,97 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     }
   };
 
-  // Hàm xử lý logic cho cả "Lưu mới" và "Cập nhật"
   const handleSaveOrUpdateProject = () => {
     if (!canvas) {
       toast({ title: "Lỗi", description: "Canvas chưa sẵn sàng.", variant: "destructive" });
       return;
     }
-    // Nếu là lưu mới, cần phải có tên dự án
     if (!activeProjectId && !newProjectName.trim()) {
       toast({ title: "Lỗi", description: "Vui lòng nhập tên cho dự án mới.", variant: "destructive" });
       return;
     }
 
-    // =================================================================
-    // BƯỚC 1: Đảm bảo tất cả các đối tượng đều được "nhìn thấy"
-    // =================================================================
-    // Lưu lại trạng thái 'visible' hiện tại của tất cả các đối tượng
     const originalVisibility: { obj: fabric.Object, visible: boolean }[] = [];
     canvas.getObjects().forEach(obj => {
-        originalVisibility.push({ obj: obj, visible: obj.visible || false });
-        // Tạm thời làm cho tất cả các đối tượng đều hiển thị
+        originalVisibility.push({ obj, visible: obj.visible || false });
         obj.set('visible', true);
     });
-    
-    // =================================================================
-    // BƯỚC 2: Tạo JSON chỉ chứa các đối tượng thiết kế (SỬA LỖI QUYẾT ĐỊNH)
-    // =================================================================
-    // Tự xây dựng một object JSON thay vì dùng canvas.toJSON()
-    // để tránh bao gồm ảnh nền và các thuộc tính không cần thiết khác.
+
     const designData = {
         version: fabric.version,
-        // Dùng map để chuyển từng đối tượng fabric thành object JavaScript thuần túy,
-        // và yêu cầu nó bao gồm thuộc tính 'data' tùy chỉnh của chúng ta.
         objects: canvas.getObjects().map(obj => obj.toObject(['data']))
     };
     const json = JSON.stringify(designData);
-    
-    // =================================================================
-    // BƯỚC 3: Khôi phục lại trạng thái hiển thị ban đầu
-    // =================================================================
-    // Trả các đối tượng về trạng thái ẩn/hiện ban đầu để người dùng không thấy sự thay đổi.
-    originalVisibility.forEach(item => {
-        item.obj.set('visible', item.visible);
-    });
-    // Yêu cầu canvas vẽ lại để giao diện khớp với trạng thái đã khôi phục.
+
+    originalVisibility.forEach(item => item.obj.set('visible', item.visible));
     canvas.renderAll();
 
-    // (Tùy chọn) Log để kiểm tra kết quả
     console.log("[Save Panel] Dữ liệu JSON cuối cùng sẽ được lưu:", json);
 
-    // Tạo ảnh xem trước từ trạng thái canvas hiện tại
     const preview = canvas.toDataURL({ format: 'png', quality: 0.1, multiplier: 0.1 });
 
-    // Logic lưu hoặc cập nhật không đổi
     if (activeProjectId) {
-      // --- LUỒNG CẬP NHẬT DỰ ÁN HIỆN TẠI ---
       projectLocal.updateProject(activeProjectId, json, preview, selectedProduct);
       refreshProjects();
       toast({ title: "Thành công!", description: `Đã cập nhật dự án.` });
     } else {
-      // --- LUỒNG LƯU DỰ ÁN MỚI ---
       const newProject = projectLocal.saveProject(newProjectName, json, preview, selectedProduct);
-      setActiveProjectId(newProject.id); // Set ID của dự án vừa tạo là active
+      setActiveProjectId(newProject.id);
       setNewProjectName('');
-      setIsModalOpen(false); // Đóng dialog sau khi lưu
+      setIsModalOpen(false);
       refreshProjects();
       toast({ title: "Thành công!", description: `Đã lưu dự án "${newProjectName}".` });
     }
   };
   
-  // Hàm tải dự án, set activeProjectId
   const handleLoadProject = (project: ProjectData) => {
     if (!canvas) return;
-
-    if (!confirm(`Bạn có chắc muốn tải dự án "${project.title}"? Mọi thay đổi chưa lưu sẽ bị mất.`)) {
-        return;
-    }
+    if (!confirm(`Bạn có chắc muốn tải dự án "${project.title}"? Mọi thay đổi chưa lưu sẽ bị mất.`)) return;
     
-    // Kích hoạt quá trình tải trong Zustand
     useDesignStore.getState().startLoadingProject(project.json);
-    
-    // Set ID của dự án đang tải
     setActiveProjectId(project.id);
-
-    // Thay đổi sản phẩm trên canvas
     onProductChange(project.product);
   };
 
   const handleDeleteProject = (id: string, title: string) => {
     if (confirm(`Bạn có chắc muốn xóa dự án "${title}" không?`)) {
         projectLocal.deleteProject(id);
-        
-        // Nếu dự án đang xóa cũng là dự án đang active, reset ID
-        if (id === activeProjectId) {
-            setActiveProjectId(null);
-        }
-
+        if (id === activeProjectId) setActiveProjectId(null);
         refreshProjects();
         toast({ title: "Đã xóa", description: `Dự án "${title}" đã được xóa.` });
+    }
+  };
+
+  const findObjectById = (id: string) => canvas?.getObjects().find(obj => (obj as any).data?.id === id);
+
+  const handleSelectLayer = (id: string) => {
+    if (!canvas) return;
+    const object = findObjectById(id);
+    if (object) {
+      canvas.setActiveObject(object);
+      canvas.renderAll();
+    }
+  };
+
+  const handleToggleVisibility = (id: string) => {
+    if (!canvas) return;
+    const object = findObjectById(id);
+    if (object) {
+      object.set('visible', !object.visible);
+      canvas.renderAll();
+    }
+  };
+
+  const handleToggleLock = (id: string) => {
+    if (!canvas) return;
+    const object = findObjectById(id);
+    if (object) {
+      object.set({
+        selectable: !object.selectable,
+        evented: !object.evented,
+      });
+      (object as any).data = { ...(object as any).data, isLocked: !object.selectable };
+      canvas.renderAll();
     }
   };
 
@@ -234,32 +226,53 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
         </TabsList>
         <TabsContent value="layers" className="flex-1 p-4 flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="gap-2" onClick={handleAddText}><FileText className="w-4 h-4" /> Thêm Chữ</Button>
-            <label htmlFor="image-upload-btn" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 cursor-pointer"><ImageIcon className="w-4 h-4" /> Tải Ảnh</label>
+            <Button variant="outline" className="gap-2" onClick={handleAddText}>
+              <FileText className="w-4 h-4" /> Thêm Chữ
+            </Button>
+            <label htmlFor="image-upload-btn" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 cursor-pointer">
+              <ImageIcon className="w-4 h-4" /> Tải Ảnh
+            </label>
             <input id="image-upload-btn" type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/>
           </div>
-          <LogoLibrary />
+
           <p className="text-sm font-medium text-muted-foreground">Danh sách lớp ({activeSide === 'front' ? 'Mặt trước' : 'Mặt sau'})</p>
           <div className="space-y-2 overflow-y-auto flex-1">
             {visibleLayers.length > 0 ? (
               visibleLayers.map((layer: UILayer) => (
-                <LayerItem key={layer.id} id={layer.id} type={layer.type} title={layer.title} isActive={layer.id === selectedObject?.data?.id} onDelete={() => handleDeleteLayer(layer.id)} onDuplicate={() => handleDuplicateLayer(layer.id)}/>
+                <LayerItem
+                  key={layer.id}
+                  id={layer.id}
+                  type={layer.type}
+                  title={layer.title}
+                  isActive={layer.id === (selectedObject && (selectedObject as any).data?.id)}
+                  isVisible={layer.visible}
+                  isLocked={(layer as any).data?.isLocked || false}
+                  onSelect={() => handleSelectLayer(layer.id)}
+                  onToggleVisibility={() => handleToggleVisibility(layer.id)}
+                  onToggleLock={() => handleToggleLock(layer.id)}
+                  onDelete={() => handleDeleteLayer(layer.id)}
+                  onDuplicate={() => handleDuplicateLayer(layer.id)}
+                />
               ))
-            ) : (<div className="text-center text-xs text-muted-foreground p-4 border-dashed border-2 rounded-lg h-full flex flex-col justify-center items-center"><p>Chưa có lớp nào.</p><p>Hãy thêm chi tiết để bắt đầu!</p></div>)}
+            ) : (
+              <div className="text-center text-xs text-muted-foreground p-4 border-dashed border-2 rounded-lg h-full flex flex-col justify-center items-center">
+                <p>Chưa có lớp nào.</p>
+                <p>Hãy thêm chi tiết để bắt đầu!</p>
+              </div>
+            )}
           </div>
         </TabsContent>
+
         <TabsContent value="projects" className="flex-1 p-4 flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-2">
-            <Button className="gap-2" onClick={handleNewProject} variant="outline"><FilePlus className="w-4 h-4" /> Thiết kế mới</Button>
-            
-            {/* Nút Save/Update động */}
+            <Button className="gap-2" onClick={handleNewProject} variant="outline">
+              <FilePlus className="w-4 h-4" /> Thiết kế mới
+            </Button>
             {activeProjectId ? (
-              // Nếu đang chỉnh sửa một dự án, hiển thị nút "Cập nhật"
               <Button className="gap-2 w-full" disabled={layers.length === 0} onClick={handleSaveOrUpdateProject}>
                 <Save className="w-4 h-4" /> Cập nhật dự án
               </Button>
             ) : (
-              // Nếu là thiết kế mới, hiển thị nút "Lưu" mở ra Dialog
               <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2 w-full" disabled={layers.length === 0}>
@@ -281,20 +294,42 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
               </Dialog>
             )}
           </div>
+
           <p className="text-sm font-medium text-muted-foreground">Các dự án đã lưu</p>
           <div className="space-y-2 overflow-y-auto flex-1">
             {projects.length > 0 ? (
-                projects.map(p => (
-                    <div key={p.id} className={`group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors ${p.id === activeProjectId ? 'bg-primary/10 border-primary' : ''}`}>
-                        <img src={p.previewImage} alt={p.title} className="w-12 h-12 flex-shrink-0 rounded-md object-cover border bg-white cursor-pointer" onClick={() => handleLoadProject(p)}/>
-                        <div className="flex-1 min-w-0" onClick={() => handleLoadProject(p)}>
-                            <p className="text-sm font-semibold truncate cursor-pointer">{p.title}</p>
-                            <p className="text-xs text-muted-foreground">{new Date(p.updatedAt).toLocaleString('vi-VN')}</p>
-                        </div>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100 flex-shrink-0" onClick={() => handleDeleteProject(p.id, p.title)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                    </div>
-                ))
-            ) : (<div className="text-center text-xs text-muted-foreground p-4 border-dashed border-2 rounded-lg h-full flex flex-col justify-center items-center"><p>Bạn chưa có dự án nào được lưu.</p></div>)}
+              projects.map(p => (
+                <div
+                  key={p.id}
+                  className={`group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors ${
+                    p.id === activeProjectId ? 'bg-primary/10 border-primary' : ''
+                  }`}
+                >
+                  <img
+                    src={p.previewImage}
+                    alt={p.title}
+                    className="w-12 h-12 flex-shrink-0 rounded-md object-cover border bg-white cursor-pointer"
+                    onClick={() => handleLoadProject(p)}
+                  />
+                  <div className="flex-1 min-w-0" onClick={() => handleLoadProject(p)}>
+                    <p className="text-sm font-semibold truncate cursor-pointer">{p.title}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(p.updatedAt).toLocaleString('vi-VN')}</p>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 opacity-0 group-hover:opacity-100 flex-shrink-0"
+                    onClick={() => handleDeleteProject(p.id, p.title)}
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-xs text-muted-foreground p-4 border-dashed border-2 rounded-lg h-full flex flex-col justify-center items-center">
+                <p>Bạn chưa có dự án nào được lưu.</p>
+              </div>
+            )}
           </div>
         </TabsContent>
       </Tabs>

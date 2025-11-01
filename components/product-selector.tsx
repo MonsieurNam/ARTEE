@@ -7,7 +7,6 @@ const PRODUCT_TYPES = [
   { id: "tee", name: "T-Shirt", icon: "👕" },
   { id: "hoodie", name: "Hoodie", icon: "🧥" },
   { id: "polo", name: "Polo", icon: "👔" },
-  { id: "sweatshirt", name: "Sweatshirt", icon: "🧢" },
 ]
 
 const COLORS = [

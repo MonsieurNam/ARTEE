@@ -251,7 +251,7 @@ const DesignCanvas = forwardRef<HTMLCanvasElement, DesignCanvasProps>(
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          {/* <Card className="p-4">
             <h3 className="font-semibold text-foreground mb-3 text-sm md:text-base">Thư viện logo</h3>
             <div className="grid grid-cols-4 gap-2">
               {LOGO_LIBRARY.map((logo) => (
@@ -265,7 +265,7 @@ const DesignCanvas = forwardRef<HTMLCanvasElement, DesignCanvasProps>(
                 </button>
               ))}
             </div>
-          </Card>
+          </Card> */}
         </div>
 
         {designElements.length > 0 && (

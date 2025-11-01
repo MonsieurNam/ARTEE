@@ -12,7 +12,7 @@ Một nền tảng web hiện đại cho phép người dùng thiết kế và m
 - Newsletter signup và social media links
 
 ### Design Customizer
-- **Chọn Sản Phẩm**: 4 loại áo (Tee, Hoodie, Polo, Sweatshirt), 8 màu sắc, 6 size
+- **Chọn Sản Phẩm**: 4 loại áo (Tee, Hoodie, Polo), 8 màu sắc, 6 size
 - **Canvas Editor**: 
   - Thêm và chỉnh sửa text với kiểm soát kích thước và màu sắc
   - Thư viện logo emoji (8 thiết kế sẵn)

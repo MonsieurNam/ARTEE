@@ -1,4 +1,6 @@
-// FILE: store/design-store.ts
+// store/design-store.ts
+// THAY THẾ TOÀN BỘ FILE BẰNG PHIÊN BẢN ĐÃ ĐƯỢC DỌN DẸP NÀY
+
 import { create } from 'zustand';
 import * as fabric from 'fabric';
 
@@ -25,16 +27,17 @@ interface DesignState {
   selectedObject: fabric.Object | null;
   isLoadingProject: boolean;
   projectToLoad: string | null;
-  activeProjectId: string | null; // ID của dự án đang được chỉnh sửa
+  activeProjectId: string | null;
+  zoomLevel: number;
 
   setCanvas: (canvas: fabric.Canvas | null) => void;
   setActiveSide: (side: 'front' | 'back') => void;
   setLayers: (objects: fabric.Object[]) => void;
   setSelectedObject: (obj: fabric.Object | null) => void;
-  
   startLoadingProject: (projectJSON: string) => void;
   finishLoadingProject: () => void;
   setActiveProjectId: (id: string | null) => void;
+  setZoomLevel: (level: number) => void;
 }
 
 export const useDesignStore = create<DesignState>((set, get) => ({
@@ -46,26 +49,32 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   isLoadingProject: false,
   projectToLoad: null,
   activeProjectId: null,
+  zoomLevel: 1,
 
   // --- ACTIONS ---
   setCanvas: (canvasInstance) => set({ canvas: canvasInstance }),
   
   setActiveSide: (side) => {
+    // Khi đổi mặt áo, bỏ chọn đối tượng để tránh lỗi
+    get().canvas?.discardActiveObject();
+    get().canvas?.renderAll();
     set({ activeSide: side, selectedObject: null });
   },
   
   setLayers: (objects) => {
-    const newLayers: UILayer[] = objects.map((obj) => {
-      const id = obj.data?.id || '';
-      const side = obj.data?.side || 'front';
-      let title = 'Đối tượng không tên';
-      if (obj.type === 'i-text') {
-        title = (obj as fabric.IText).text || 'Văn bản trống';
-      } else if (obj.type === 'image') {
-        title = 'Hình ảnh';
-      }
-      return { id, type: obj.type || 'unknown', title, side };
-    }).reverse();
+    const newLayers: UILayer[] = objects
+      .filter(obj => !obj.excludeFromExport) // Lọc bỏ các đối tượng hệ thống như Safe Area
+      .map((obj) => {
+        const id = obj.data?.id || '';
+        const side = obj.data?.side || 'front';
+        let title = 'Đối tượng';
+        if (obj.type === 'i-text') {
+          title = (obj as fabric.IText).text || 'Văn bản';
+        } else if (obj.type === 'image') {
+          title = 'Hình ảnh';
+        }
+        return { id, type: obj.type || 'unknown', title, side };
+      }).reverse();
     set({ layers: newLayers });
   },
   
@@ -73,23 +82,19 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ selectedObject: obj });
   },
 
-  // ===== PHIÊN BẢN ĐÃ HỢP NHẤT =====
-  // Khi bắt đầu tải một dự án mới, chúng ta vừa bật cờ loading,
-  // vừa lưu JSON, và quan trọng là RESET lại ID của dự án đang active.
   startLoadingProject: (projectJSON) => {
     set({ 
       isLoadingProject: true, 
       projectToLoad: projectJSON, 
-      activeProjectId: null // Reset ID để chuẩn bị cho dự án mới được tải
+      activeProjectId: null 
     });
   },
-  // ===================================
   
   finishLoadingProject: () => {
     set({ isLoadingProject: false, projectToLoad: null });
   },
 
-  // Action này sẽ được gọi SAU KHI dự án đã tải xong,
-  // để set ID của dự án vừa được tải là active.
   setActiveProjectId: (id) => set({ activeProjectId: id }),
+  
+  setZoomLevel: (level) => set({ zoomLevel: level }),
 }));
