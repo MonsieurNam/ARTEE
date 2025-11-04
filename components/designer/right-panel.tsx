@@ -506,14 +506,14 @@ export default function RightPanel({
                 <p>Để được tư vấn và đặt hàng, vui lòng liên hệ chúng tôi qua:</p>
                 <ul>
                   <li>
-                    <strong>Hotline:</strong> 0123.456.789
+                    <strong>Hotline:</strong> 0985.029.160
                   </li>
                   <li>
-                    <strong>Email:</strong> contact@artee.vn
+                    <strong>Email:</strong> namnguyenfnw@gmail.com
                   </li>
-                  <li>
+                  {/* <li>
                     <strong>Fanpage:</strong> fb.com/artee.fashion
-                  </li>
+                  </li> */}
                 </ul>
               </div>
             </DialogContent>

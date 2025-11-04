@@ -13,17 +13,17 @@ const contactDetails = [
   {
     icon: <MapPin className="w-5 h-5 text-primary" />,
     title: "Địa chỉ",
-    value: "123 Đường ABC, Quận 1, TP. Hồ Chí Minh",
+    value: "Ninh Kiều, Cần Thơ, Việt Nam",
   },
   {
     icon: <Mail className="w-5 h-5 text-primary" />,
     title: "Email",
-    value: "support@artee.com",
+    value: "namnguyenfnw@gmail.com",
   },
   {
     icon: <Phone className="w-5 h-5 text-primary" />,
     title: "Điện thoại",
-    value: "+84 123 456 789",
+    value: "+84 985 029 160",
   },
 ];
 

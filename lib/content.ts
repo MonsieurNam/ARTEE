@@ -65,7 +65,7 @@ export const COLLECTION = {
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
         { id: 1, url: "/remove_background/hoodie_front (2).png", alt: "Ấn Sen front view", pose: "front" },
-        { id: 2, url: "/remove_background/hoodie_side.png", alt: "Ấn Sen side view", pose: "side" },
+        // { id: 2, url: "/remove_background/hoodie_side.png", alt: "Ấn Sen side view", pose: "side" },
         { id: 3, url: "/remove_background/hoodie_back (2).png", alt: "Ấn Sen back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
@@ -95,7 +95,7 @@ export const COLLECTION = {
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
         { id: 1, url: "/remove_background/coffe_front.png", alt: "Nạp Cảm Hứng front view", pose: "front" },
-        { id: 2, url: "/remove_background/coffe_side.png", alt: "Nạp Cảm Hứng side view", pose: "side" },
+        // { id: 2, url: "/remove_background/coffe_side.png", alt: "Nạp Cảm Hứng side view", pose: "side" },
         { id: 3, url: "/remove_background/coffe_back.png", alt: "Nạp Cảm Hứng back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
@@ -125,7 +125,7 @@ export const COLLECTION = {
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
         { id: 1, url: "/remove_background/brand_front.png", alt: "CHUNG NHỊP VƯƠN XA front view", pose: "front" },
-        { id: 2, url: "/remove_background/brand_side.png", alt: "CHUNG NHỊP VƯƠN XA side view", pose: "side" },
+        // { id: 2, url: "/remove_background/brand_side.png", alt: "CHUNG NHỊP VƯƠN XA side view", pose: "side" },
         { id: 3, url: "/remove_background/brand_back.png", alt: "CHUNG NHỊP VƯƠN XA back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
@@ -155,7 +155,7 @@ export const COLLECTION = {
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
         { id: 1, url: "/remove_background/custom_front.png", alt: "Hồi ức đáng nhớ front view", pose: "front" },
-        { id: 2, url: "/remove_background/custom_side.png", alt: "Hồi ức đáng nhớ side view", pose: "side" },
+        // { id: 2, url: "/remove_background/custom_side.png", alt: "Hồi ức đáng nhớ side view", pose: "side" },
         { id: 3, url: "/remove_background/custom_back.png", alt: "Hồi ức đáng nhớ back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],

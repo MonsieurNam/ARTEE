@@ -15,6 +15,7 @@ import {
   HeadphonesIcon,
   X,
   Sparkles,
+  RefreshCw
 } from "lucide-react"
 import type { Product } from "@/lib/content"
 import { useToast } from "@/hooks/use-toast"
@@ -429,6 +430,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         isOpen={isImageZoomed}
         onClose={() => setIsImageZoomed(false)}
         imageUrl={mainImage}
+        productId={product.id}
       />
 
       <VirtualTryOnModal
@@ -452,18 +454,41 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   )
 }
 
-// Component ImageZoomModal (Không thay đổi)
+/// Component ImageZoomModal (Đã cập nhật theo yêu cầu nền)
 interface ImageZoomModalProps {
   isOpen: boolean
   onClose: () => void
   imageUrl: string
+  productId: number; // <-- Đã thêm
 }
 
-function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
+function ImageZoomModal({ isOpen, onClose, imageUrl, productId }: ImageZoomModalProps) {
+
+  // --- LOGIC MỚI ---
+  // ID 2 = Nạp Cảm Hứng , ID 4 = Hồi ức đáng nhớ 
+  const isLightBg = (productId === 2 || productId === 4);
+  
+  const overlayClass = isLightBg 
+    ? "bg-white" // Nền trắng
+    : "bg-black/80 backdrop-blur-sm"; // Nền đen (mặc định)
+    
+  // Đổi màu chữ của nút control (Zoom +/-)
+  const controlButtonClass = isLightBg
+    ? "text-black hover:bg-black/20" // Chữ đen
+    : "text-white hover:bg-white/20"; // Chữ trắng (mặc định)
+    
+  // Đổi màu nút Đóng (X)
+  const closeButtonClass = isLightBg
+    ? "bg-black/30 text-white/80" // Nền đen, Chữ X trắng
+    : "bg-white/30 text-white/80"; // Nền trắng, Chữ X trắng (mặc định)
+  // --- KẾT THÚC LOGIC MỚI ---
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
-      <DialogContent className="max-w-4xl w-full p-0 bg-transparent border-0 shadow-none">
+      {/* SỬ DỤNG CLASS MỚI 1 */}
+      <DialogOverlay className={overlayClass} />
+      
+      <DialogContent className="fixed inset-0 w-full h-full max-w-none p-0 bg-transparent border-0 shadow-none left-0 top-0 translate-x-0 translate-y-0">
         <DialogTitle className="sr-only">Phóng to ảnh sản phẩm</DialogTitle>
         <TransformWrapper
           initialScale={1}
@@ -477,12 +502,14 @@ function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
         >
           {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
             <>
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 p-2 rounded-full bg-black/50 backdrop-blur-md">
+              {/* Thanh control (Nền của thanh này vẫn là đen/mờ) */}
+              <div className="absolute top-4 left-177 z-10 flex gap-2 p-2 rounded-full bg-black/50 backdrop-blur-md">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => zoomIn()}
-                  className="text-white hover:bg-white/20"
+                  // SỬ DỤNG CLASS MỚI 2
+                  className={controlButtonClass}
                 >
                   <span className="sr-only">Zoom In</span>+
                 </Button>
@@ -490,7 +517,8 @@ function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => zoomOut()}
-                  className="text-white hover:bg-white/20"
+                  // SỬ DỤNG CLASS MỚI 2
+                  className={controlButtonClass}
                 >
                   <span className="sr-only">Zoom Out</span>-
                 </Button>
@@ -498,16 +526,19 @@ function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
                   variant="ghost"
                   size="icon"
                   onClick={() => resetTransform()}
-                  className="text-white hover:bg-white/20"
+                  // SỬ DỤNG CLASS MỚI 2
+                  className={controlButtonClass}
                 >
                   <span className="sr-only">Reset Zoom</span>
-                  <X className="rotate-45" />
+                  <RefreshCw className="rotate-0" />
                 </Button>
               </div>
+
+              {/* "Canvas" (TransformComponent) */}
               <TransformComponent
-                wrapperStyle={{
-                  width: "100%",
-                  height: "100%",
+                 wrapperStyle={{
+                  width: "100vw",
+                  height: "100vh",
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
@@ -518,17 +549,21 @@ function ImageZoomModal({ isOpen, onClose, imageUrl }: ImageZoomModalProps) {
                   alignItems: "center",
                 }}
               >
+                {/* Ảnh */}
                 <img
                   src={imageUrl}
                   alt="Product Zoom"
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg cursor-grab"
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-lg cursor-grab"
                   style={{ userSelect: "none" }}
                 />
               </TransformComponent>
             </>
           )}
         </TransformWrapper>
-        <DialogClose className="absolute -top-2 -right-2 md:-top-4 md:-right-4 rounded-full bg-white/30 p-2 text-white/80 opacity-80 hover:opacity-100 transition-all backdrop-blur-md">
+
+        {/* Nút đóng */}
+        {/* SỬ DỤNG CLASS MỚI 3 */}
+        <DialogClose className={`absolute top-4 right-4 rounded-full p-2 opacity-80 hover:opacity-100 transition-all backdrop-blur-md z-20 ${closeButtonClass}`}>
           <X className="w-5 h-5" />
         </DialogClose>
       </DialogContent>
