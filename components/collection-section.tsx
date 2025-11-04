@@ -135,7 +135,7 @@ export default function CollectionSection() {
 
                     {/* Enhanced Product Info */}
                     <div className="space-y-3 px-1">
-                      <h3 className="text-xl md:text-2xl font-serif font-medium text-neutral-900 line-clamp-2 group-hover:text-neutral-600 transition-colors duration-300">
+                      <h3 className="text-xl md:text-2xl font-sans font-semibold text-neutral-900 line-clamp-2 group-hover:text-neutral-600 transition-colors duration-300">
                         {product.name}
                       </h3>
                       
