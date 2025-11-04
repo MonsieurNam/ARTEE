@@ -61,11 +61,12 @@ export const COLLECTION = {
       name: "Ấn Sen",
       description: " Biểu tượng của sự thuần khiết và kiên cường",
       price: 299000,
-      image: "/hoodie_sau.png",
+      image: "/remove_background/hoodie_back (2).png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
-        { id: 1, url: "/hoodie_truoc.png", alt: "Ấn Sen front view", pose: "front" },
-        { id: 2, url: "/hoodie_sau.png", alt: "Ấn Sen back view", pose: "back" },
+        { id: 1, url: "/remove_background/hoodie_front (2).png", alt: "Ấn Sen front view", pose: "front" },
+        { id: 2, url: "/remove_background/hoodie_side.png", alt: "Ấn Sen side view", pose: "side" },
+        { id: 3, url: "/remove_background/hoodie_back (2).png", alt: "Ấn Sen back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: false,
@@ -93,8 +94,9 @@ export const COLLECTION = {
       image: "/cafe_sau.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
-        { id: 1, url: "/cafe_truoc.png", alt: "Nạp Cảm Hứng front view", pose: "front" },
-        { id: 2, url: "/cafe_sau.png", alt: "Nạp Cảm Hứng back view", pose: "back" },
+        { id: 1, url: "/remove_background/coffe_front.png", alt: "Nạp Cảm Hứng front view", pose: "front" },
+        { id: 2, url: "/remove_background/coffe_side.png", alt: "Nạp Cảm Hứng side view", pose: "side" },
+        { id: 3, url: "/remove_background/coffe_back.png", alt: "Nạp Cảm Hứng back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
@@ -119,11 +121,12 @@ export const COLLECTION = {
       name: "Chung nhịp vươn xa",
       description: "Thiết kế dành cho doanh nghiệp và đội nhóm",
       price: 299000,
-      image: "/brand_moc.png",
+      image: "/remove_background/brand_front.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
-        { id: 1, url: "/brand_moc.png", alt: "CHUNG NHỊP VƯƠN XA front view", pose: "front" },
-        { id: 2, url: "/áo sếp.png", alt: "CHUNG NHỊP VƯƠN XA back view", pose: "back" },
+        { id: 1, url: "/remove_background/brand_front.png", alt: "CHUNG NHỊP VƯƠN XA front view", pose: "front" },
+        { id: 2, url: "/remove_background/brand_side.png", alt: "CHUNG NHỊP VƯƠN XA side view", pose: "side" },
+        { id: 3, url: "/remove_background/brand_back.png", alt: "CHUNG NHỊP VƯƠN XA back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
@@ -148,11 +151,12 @@ export const COLLECTION = {
       name: "Hồi ức đáng nhớ",
       description: "Nơi lưu giữ và chia sẻ kỉ niệm",
       price: 299000,
-      image: "/custom_sau.png",
+      image: "/remove_background/custom_back.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
-        { id: 1, url: "/custom_truoc.png", alt: "Hồi ức đáng nhớ front view", pose: "front" },
-        { id: 2, url: "/custom_sau.png", alt: "Hồi ức đáng nhớ back view", pose: "back" },
+        { id: 1, url: "/remove_background/custom_front.png", alt: "Hồi ức đáng nhớ front view", pose: "front" },
+        { id: 2, url: "/remove_background/custom_side.png", alt: "Hồi ức đáng nhớ side view", pose: "side" },
+        { id: 3, url: "/remove_background/custom_back.png", alt: "Hồi ức đáng nhớ back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
       isARReady: true,
