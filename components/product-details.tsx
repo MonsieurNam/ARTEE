@@ -464,7 +464,7 @@ interface ImageZoomModalProps {
 function ImageZoomModal({ isOpen, onClose, imageUrl, productId }: ImageZoomModalProps) {
 
   // ID 2 = Nạp Cảm Hứng, ID 4 = Hồi ức đáng nhớ
-  const isLightBg = (productId === 2 || productId === 4);
+  const isLightBg = (productId === 2 || productId === 4 || productId === 3);
   
   const overlayClass = "bg-black/80 backdrop-blur-sm";
     
@@ -539,7 +539,7 @@ function ImageZoomModal({ isOpen, onClose, imageUrl, productId }: ImageZoomModal
               {/* "Canvas" (TransformComponent) */}
               <TransformComponent
                 wrapperStyle={{
-                  width: "100%", 
+                  width: "92%", 
                   height: "100%",
                   display: "flex",
                   justifyContent: "center",
