@@ -69,7 +69,7 @@ export const COLLECTION = {
         { id: 3, url: "/remove_background/hoodie_back (2).png", alt: "Ấn Sen back view", pose: "back" },
         // --- KẾT THÚC CẬP NHẬT ---
       ],
-      isARReady: false,
+      isARReady: true,
       story:
         "Ấn Sen – một con dấu cổ, nén trọn vẹn vòng đời của đóa sen vào trong một khoảnh khắc: từ mầm non trong bùn đất, vươn lên thành lá, thành hoa, rồi kết đài. Không chỉ là một chiếc áo, đây là một con dấu khẳng định khí chất. Giống như đóa sen vươn lên từ bùn lầy mà vẫn thuần khiết, nó dành cho những ai luôn giữ được bản sắc riêng của mình giữa dòng đời.",
       fabrics: [
