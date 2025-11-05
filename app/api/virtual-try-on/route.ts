@@ -49,28 +49,33 @@ export async function POST(request: NextRequest) {
 
     // 2. Xây dựng "Prompt Thông minh" (Không đổi)
     const smartPrompt = `
-      You are an expert AI "Virtual Try-On" specialist for the ARTEE fashion brand.
-        I will provide 3 inputs:
-        1.  [Image 1: User's Photo]
-        2.  [Image 2: Garment Photo]
-        3.  A text variable 'productPose'. The current productPose is: "${productPose}".
+      You are an expert AI "Virtual Try-On" specialist for the ARTEE fashion brand.
+        I will provide 3 inputs:
+        1.  [Image 1: Person's Photo] (Đây là người sẽ mặc quần áo mới).
+        2.  [Image 2: Garment Photo] (Đây là TOÀN BỘ sản phẩm quần áo - áo thun, hoodie, v.v. - để mặc. Nó KHÔNG PHẢI chỉ là một logo hay thiết kế).
+        3.  A text variable 'productPose'. The current productPose is: "${productPose}".
 
-        **TASK 1: VALIDATION (Most Important)**
-        -   Analyze [Image 1: User's Photo] to see if it is a 'front' view or 'back' view.
-        -   Compare this detected pose to the 'productPose' variable ("${productPose}").
+        **TASK 1: VALIDATION (Most Important)**
+        -   Analyze [Image 1: Person's Photo] to see if it is a 'front' view or 'back' view.
+        -   Compare this detected pose to the 'productPose' variable ("${productPose}").
 
-        **TASK 2: ACTION**
+        **TASK 2: ACTION**
 
-        * **IF POSES DO NOT MATCH** (e.g., user is 'front' but 'productPose' is 'back'):
-            1.  DO NOT generate an image.
-            2.  Your ONLY output must be a single, brief text sentence in VIETNAMESE explaining the mismatch.
-            3.  Example: "Lỗi: Ảnh của bạn là mặt trước, nhưng áo đang ở mặt sau. Vui lòng tải ảnh phù hợp."
+        * **IF POSES DO NOT MATCH** (e.g., user is 'front' but 'productPose' is 'back'):
+            1.  DO NOT generate an image.
+            2.  Your ONLY output must be a single, brief text sentence in VIETNAMESE explaining the mismatch.
+            3.  Example: "Lỗi: Ảnh của bạn là mặt trước, nhưng áo đang ở mặt sau. Vui lòng tải ảnh phù hợp."
 
-        * **IF POSES MATCH:**
-            1.  Generate a new image where the person from [Image 1] is wearing the [Image 2: Garment].
-            2.  **Generation Rules:** You MUST preserve 100% of the person's face, hair, skin tone, pose, and the background from [Image 1]. Realistically warp and drape the garment.
-            3.  Your ONLY output must be the final generated image. Do not add any text.
-    `;
+        * **IF POSES MATCH:**
+            1.  Your task is to digitally **REPLACE** (thay thế) quần áo mà người trong [Image 1] đang mặc bằng **TOÀN BỘ SẢN PHẨM** (entire garment) từ [Image 2].
+            2.  **Generation Rules:**
+                * You MUST preserve the person's face, hair, skin tone, pose, and the background 100% exactly as in [Image 1].
+                * You MUST take the **entire clothing item** from [Image 2] (ví dụ: nguyên cái áo thun, chứ không phải chỉ logo của nó) và điều chỉnh (warp/drape) nó một cách thực tế lên cơ thể của người trong [Image 1].
+                * Quần áo gốc trong [Image 1] (áo họ đang mặc) phải được **che phủ HOÀN TOÀN** bởi sản phẩm mới từ [Image 2].
+            3.  DO NOT change the person's face, hair, or pose.
+            4.  DO NOT change the background.
+            5.  Your ONLY output must be the final generated image. Do not add any text.
+    `;
 
     // 3. Gọi API qua Vercel AI Gateway (Không đổi)
     const result = await generateText({
