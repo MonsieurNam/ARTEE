@@ -60,7 +60,7 @@ export const COLLECTION = {
       id: 1,
       name: "Ấn Sen",
       description: " Biểu tượng của sự thuần khiết và kiên cường",
-      price: 299000,
+      price: 499000,
       image: "/remove_background/hoodie_back (2).png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
@@ -90,7 +90,7 @@ export const COLLECTION = {
       id: 2,
       name: "Nạp Cảm Hứng",
       description: "Không chỉ là một ly cà phê, đây là nút 'khởi động' cho mọi ý tưởng",
-      price: 299000,
+      price: 399000,
       image: "/cafe_sau.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
@@ -120,7 +120,7 @@ export const COLLECTION = {
       id: 3,
       name: "Chung nhịp vươn xa",
       description: "Thiết kế dành cho doanh nghiệp và đội nhóm",
-      price: 299000,
+      price: 449000,
       image: "/remove_background/brand_front.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
@@ -150,7 +150,7 @@ export const COLLECTION = {
       id: 4,
       name: "Hồi ức đáng nhớ",
       description: "Nơi lưu giữ và chia sẻ kỉ niệm",
-      price: 299000,
+      price: 399000,
       image: "/remove_background/custom_back.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
