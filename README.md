@@ -2,6 +2,17 @@
 
 Một nền tảng web hiện đại cho phép người dùng thiết kế và mua áo in theo yêu cầu (Print-on-Demand) với công nghệ AR và virtual try-on.
 
+## Demonstration Video
+
+<div align="center">
+    <a href="https://youtu.be/Ig2rViUuDlQ?si=VTpBIFeUF5cZzXpx">
+    </a>
+</div>
+
+[![Watch the video](https://youtu.be/J4xfar31A_s?si=XZHzraOhkMdscS4W)]
+
+**Click on the image above to watch the project demonstration video on YouTube**
+
 ## 🎨 Tính Năng Chính
 
 ### Landing Page
