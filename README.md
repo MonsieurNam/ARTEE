@@ -9,7 +9,7 @@ Một nền tảng web hiện đại cho phép người dùng thiết kế và m
     </a>
 </div>
 
-[![Watch the video](./public/remove_background/main_web.png)](https://www.youtube.com/watch?v=J4xfar31A_s)
+[![Watch the video](/public/main_web.png)](https://www.youtube.com/watch?v=J4xfar31A_s)
 
 
 **Click on the image above to watch the project demonstration video on YouTube**
