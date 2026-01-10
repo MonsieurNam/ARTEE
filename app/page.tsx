@@ -7,25 +7,19 @@ import HowItWorksSection from "@/components/how-it-works-section"
 import FinalCtaSection from "@/components/final-cta-section"
 import Link from "next/link"
 import ContactSection from "@/components/ContactSection"
+import TechShowcaseSection from "@/components/tech-showcase-section" // 1. IMPORT
 
 export default function Home() {
   return (
     <main className="w-full overflow-hidden">
       <Header />
       <HeroSection />
+      <TechShowcaseSection /> 
       <BrandStorySection />
       <CollectionSection />
-      <HowItWorksSection />
+      {/* <HowItWorksSection /> */}
       <ContactSection />
       <FinalCtaSection />
-
-      {/* Floating CTA Button */}
-      <Link
-        href="/customizer"
-        className="fixed bottom-8 right-8 bg-primary text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all font-semibold z-40"
-      >
-        Thiết kế riêng
-      </Link>
     </main>
   )
 }
