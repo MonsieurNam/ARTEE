@@ -91,7 +91,7 @@ export default function DesignerCanvas({ selectedProduct }: DesignerCanvasProps)
         canvas.backgroundImage = img;
 
         canvas.getObjects().forEach(obj => {
-          obj.set('visible', obj.data?.side === activeSide);
+          obj.set('visible', (obj as any).data?.side === activeSide);
         }); // <-- SỬA LỖI CÚ PHÁP: Xóa comment
         
         canvas.renderAll();
@@ -110,7 +110,7 @@ export default function DesignerCanvas({ selectedProduct }: DesignerCanvasProps)
             const objects = canvas.getObjects();
             
             objects.forEach(obj => {
-                obj.set('visible', obj.data?.side === currentSide);
+                obj.set('visible', (obj as any).data?.side === currentSide);
             });
             
             setLayers(objects);

@@ -20,6 +20,7 @@ import { useAuth } from "@/components/providers/auth-provider"; // Hook lấy us
 import { saveProjectCloud, updateProjectCloud, getUserProjects, deleteProjectCloud, type CloudProject } from "@/lib/services/project-cloud";
 import Link from "next/link";
 import { Separator } from '../ui/separator';
+import { compressImage, dataURLtoFile, uploadToCloudinary } from '@/lib/image-helper';
 
 interface LeftPanelProps {
     selectedProduct: { type: string; color: string; size: string; };
@@ -77,62 +78,62 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     }
   };
 
-  // 4. Hàm Lưu/Cập nhật MỚI (Cloud)
   const handleSaveOrUpdateProject = async () => {
-    if (!canvas) return;
-    
-    // Nếu chưa đăng nhập -> Chặn lại
-    if (!user) {
-        toast({ title: "Yêu cầu đăng nhập", description: "Bạn cần đăng nhập để lưu thiết kế.", variant: "destructive" });
+    if (!canvas || !user) {
+        toast({ title: "Lỗi", description: "Cần đăng nhập để lưu.", variant: "destructive" });
         return;
     }
 
     if (!activeProjectId && !newProjectName.trim()) {
-      toast({ title: "Thiếu tên", description: "Vui lòng đặt tên cho thiết kế.", variant: "destructive" });
+      toast({ title: "Thiếu tên", description: "Vui lòng đặt tên.", variant: "destructive" });
       return;
     }
 
     setIsSaving(true);
 
     try {
-        // Chuẩn bị dữ liệu
+        // 1. Lấy dữ liệu JSON từ Canvas
         const designData = {
-            version: fabric.version,
+            version: "6.0.0", // Hoặc fabric.version
             objects: canvas.getObjects().map(obj => obj.toObject(['data']))
         };
         const jsonString = JSON.stringify(designData);
-        // Lưu ảnh preview nhỏ để load nhanh danh sách
-        const previewUrl = canvas.toDataURL({ format: 'png', quality: 0.8, multiplier: 0.2 }); 
 
+        // 2. Tạo ảnh Preview từ Canvas (Base64)
+        // Dùng multiplier nhỏ để tạo thumbnail nhẹ
+        const previewBase64 = canvas.toDataURL({ format: 'png', quality: 0.8, multiplier: 0.5 });
+        
+        // 3. BƯỚC MỚI: Upload Preview lên Cloudinary thay vì lưu Base64 vào Firestore
+        const previewFile = dataURLtoFile(previewBase64, `preview-${Date.now()}.png`);
+        const previewUrl = await uploadToCloudinary(previewFile);
+
+        // 4. Lưu vào Firestore (Lưu URL preview ngắn gọn)
         if (activeProjectId) {
-            // Cập nhật
             await updateProjectCloud(activeProjectId, {
                 json: jsonString,
-                previewImage: previewUrl,
+                previewImage: previewUrl, // URL Cloudinary
                 product: selectedProduct
             });
-            toast({ title: "Thành công", description: "Đã cập nhật dự án trên Cloud." });
+            toast({ title: "Cập nhật thành công", description: "Dữ liệu đã được đồng bộ." });
         } else {
-            // Lưu mới
             const newProj = await saveProjectCloud({
                 uid: user.uid,
                 title: newProjectName,
                 json: jsonString,
-                previewImage: previewUrl,
+                previewImage: previewUrl, // URL Cloudinary
                 product: selectedProduct
             });
-            setActiveProjectId(newProj.id); // Set ID mới trả về từ Cloud
+            setActiveProjectId(newProj.id);
             setNewProjectName('');
             setIsModalOpen(false);
-            toast({ title: "Thành công", description: "Đã lưu thiết kế mới." });
+            toast({ title: "Lưu mới thành công", description: "Đã tạo dự án mới." });
         }
         
-        // Reload danh sách
         loadCloudProjects();
 
     } catch (error) {
         console.error(error);
-        toast({ title: "Lỗi lưu trữ", description: "Không thể lưu lên Cloud lúc này.", variant: "destructive" });
+        toast({ title: "Lỗi lưu trữ", description: "Không thể lưu dữ liệu.", variant: "destructive" });
     } finally {
         setIsSaving(false);
     }
@@ -186,44 +187,33 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
   };
 
   // Hàm xử lý upload ảnh mới
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
     
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate kích thước (Client side) - Ví dụ giới hạn 5MB
-    if (file.size > 5 * 1024 * 1024) {
-        toast({ title: "Ảnh quá lớn", description: "Vui lòng chọn ảnh dưới 5MB.", variant: "destructive" });
+    // Validate định dạng sơ bộ
+    if (!file.type.startsWith('image/')) {
+        toast({ title: "Lỗi định dạng", description: "Vui lòng chọn file ảnh.", variant: "destructive" });
         return;
     }
 
     setIsUploading(true);
 
     try {
-      // 1. Tạo FormData để gửi lên API
-      const formData = new FormData();
-      formData.append('file', file);
+      // BƯỚC MỚI: Nén ảnh trước khi upload
+      const compressedFile = await compressImage(file);
 
-      // 2. Gọi API Upload (Route chúng ta vừa tạo ở Bước 1)
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      // Gọi Helper upload
+      const imgUrl = await uploadToCloudinary(compressedFile);
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Upload thất bại');
-      }
-
-      // 3. Có URL rồi, thêm vào Canvas
-      // Lưu ý: Dùng URL từ Cloudinary thay vì Base64
-      const imgUrl = data.url;
-
+      // Thêm vào Canvas (Giữ nguyên logic cũ)
+      // Lưu ý: Fabric v6 import
+      const fabric = await import("fabric"); // Dynamic import hoặc dùng * as fabric đã import ở trên
+      
       fabric.Image.fromURL(imgUrl, { crossOrigin: 'anonymous' })
         .then((img) => {
-            // Tinh chỉnh kích thước ảnh cho vừa canvas (ví dụ: max 50% chiều rộng canvas)
             const canvasWidth = canvas.width || 400;
             const targetWidth = canvasWidth * 0.5;
             const scale = targetWidth / (img.width || 1);
@@ -231,18 +221,16 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
             img.set({
                 scaleX: scale,
                 scaleY: scale,
-                left: canvasWidth / 2, // Căn giữa
+                left: canvasWidth / 2,
                 top: (canvas.height || 500) / 2,
                 originX: 'center',
                 originY: 'center'
             });
 
-            // Gắn metadata
             (img as any).data = { 
                 id: `image-${Date.now()}`, 
                 side: activeSide,
-                // Lưu lại URL gốc để phòng hờ sau này cần
-                src: imgUrl 
+                src: imgUrl // URL Cloudinary (Ngắn)
             };
 
             canvas.add(img);
@@ -252,20 +240,19 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
             toast({ title: "Thành công", description: "Đã thêm ảnh vào thiết kế." });
         })
         .catch(err => {
-            console.error("Lỗi add ảnh vào canvas:", err);
-            toast({ title: "Lỗi hiển thị", description: "Không thể vẽ ảnh lên canvas.", variant: "destructive" });
+            console.error(err);
+            toast({ title: "Lỗi hiển thị", description: "Không thể vẽ ảnh.", variant: "destructive" });
         });
 
     } catch (error) {
       console.error("Upload error:", error);
       toast({ 
         title: "Lỗi tải ảnh", 
-        description: error instanceof Error ? error.message : "Đã có lỗi xảy ra.", 
+        description: "Không thể upload ảnh lên server.", 
         variant: "destructive" 
       });
     } finally {
       setIsUploading(false);
-      // Reset input để cho phép chọn lại cùng 1 file nếu muốn
       e.target.value = ''; 
     }
   };

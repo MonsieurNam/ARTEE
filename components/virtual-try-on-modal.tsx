@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { X, Upload, Loader2, Download } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { compressImage } from "@/lib/image-helper"; 
 
 
 async function resizeImage(dataUri: string, targetSize: number = 1024, quality: number = 0.9): Promise<string> {
@@ -87,6 +88,8 @@ export default function VirtualTryOnModal({
   const [userImage, setUserImage] = useState<string | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultImage, setResultImage] = useState<string | null>(null)
+  // Thêm state loading khi đang nén ảnh input
+  const [isProcessingInput, setIsProcessingInput] = useState(false); 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
@@ -96,24 +99,42 @@ export default function VirtualTryOnModal({
         setResultImage(null);
         setIsGenerating(false);
     }
-  }, [isOpen]); // Bỏ shirtImageUrl khỏi deps để tránh reset không mong muốn
+  }, [isOpen]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // -------------------------------------------------------
+  // PHẦN QUAN TRỌNG: LOGIC UPLOAD ĐÃ ĐƯỢC TỐI ƯU
+  // -------------------------------------------------------
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Giới hạn file input đầu vào 5MB
-    if (file.size > 5 * 1024 * 1024) { 
-      toast({ title: "Lỗi", description: "Ảnh quá lớn (Max 5MB)", variant: "destructive" })
-      return
+    // 1. BỎ giới hạn cứng 5MB cũ.
+    // Thay vào đó, chỉ check xem có phải ảnh không
+    if (!file.type.startsWith('image/')) {
+        toast({ title: "Lỗi", description: "Vui lòng chọn file ảnh", variant: "destructive" });
+        return;
     }
 
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      setUserImage(event.target?.result as string)
-      setResultImage(null)
+    setIsProcessingInput(true); // Bật loading nhẹ ở nút upload
+
+    try {
+        // 2. Nén ảnh (Dù 20MB cũng nén xuống < 1MB)
+        const compressedFile = await compressImage(file);
+
+        // 3. Đọc file đã nén ra Base64 để hiển thị
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            setUserImage(event.target?.result as string)
+            setResultImage(null)
+            setIsProcessingInput(false); // Tắt loading
+        }
+        reader.readAsDataURL(compressedFile)
+
+    } catch (error) {
+        console.error("Lỗi xử lý ảnh:", error);
+        toast({ title: "Lỗi", description: "Không thể xử lý ảnh này.", variant: "destructive" });
+        setIsProcessingInput(false);
     }
-    reader.readAsDataURL(file)
   }
 
   const handleGenerate = async () => {
@@ -131,7 +152,7 @@ export default function VirtualTryOnModal({
       const shirtImageDataUri = await ensureDataUri(shirtImageUrl);
 
       // 2. Resize ảnh về kích thước an toàn cho AI (Max 1024px)
-      // Kích thước này đủ nét nhưng không quá lớn khiến AI bị lỗi hoặc crop
+      // Hàm resizeImage này vẫn cần thiết để đảm bảo ảnh input vuông vức cho Gemini
       const resizedUserImage = await resizeImage(userImageDataUri, 1024);
       const resizedMockupImage = await resizeImage(shirtImageDataUri, 1024);
 
@@ -207,10 +228,15 @@ export default function VirtualTryOnModal({
                 <div className="space-y-2">
                     <label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">2. Ảnh của bạn</label>
                     <div 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="group relative aspect-[3/4] w-full bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer flex flex-col items-center justify-center text-center overflow-hidden"
+                        onClick={() => !isProcessingInput && fileInputRef.current?.click()}
+                        className={`group relative aspect-[3/4] w-full bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer flex flex-col items-center justify-center text-center overflow-hidden ${isProcessingInput ? 'opacity-50 cursor-wait' : ''}`}
                     >
-                        {userImage ? (
+                        {isProcessingInput ? (
+                            <div className="flex flex-col items-center text-primary">
+                                <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                                <span className="text-sm font-medium">Đang xử lý ảnh...</span>
+                            </div>
+                        ) : userImage ? (
                             <>
                                 <img src={userImage} alt="User" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -223,19 +249,19 @@ export default function VirtualTryOnModal({
                                     <Upload className="w-6 h-6" />
                                 </div>
                                 <p className="font-medium text-foreground">Tải ảnh lên</p>
-                                <p className="text-xs text-muted-foreground mt-1">Nên dùng ảnh toàn thân hoặc bán thân rõ nét</p>
+                                <p className="text-xs text-muted-foreground mt-1">Hỗ trợ ảnh mọi kích thước (Tự động nén)</p>
                             </div>
                         )}
                     </div>
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isProcessingInput} />
                 </div>
 
                 <Button 
                     onClick={handleGenerate} 
-                    disabled={!userImage || !shirtImageUrl || isGenerating} 
+                    disabled={!userImage || !shirtImageUrl || isGenerating || isProcessingInput} 
                     className="w-full py-6 text-lg font-bold shadow-lg shadow-primary/20"
                 >
-                    {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Đang xử lý...</> : "✨ Mặc thử ngay"}
+                    {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Đang may đo (AI)...</> : "✨ Mặc thử ngay"}
                 </Button>
             </div>
 
@@ -246,7 +272,7 @@ export default function VirtualTryOnModal({
                     {isGenerating ? (
                         <div className="text-center text-white/80">
                             <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-primary" />
-                            <p>AI đang may đo cho bạn...</p>
+                            <p>AI đang xử lý...</p>
                             <p className="text-xs text-white/50 mt-2">(Mất khoảng 10-15 giây)</p>
                         </div>
                     ) : resultImage ? (

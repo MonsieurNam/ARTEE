@@ -10,6 +10,7 @@ import {
   checkoutCart as checkoutCartLib, // <-- HÀM MỚI
   type CartItem,
   type Order, // <-- KIỂU DỮ LIỆU MỚI
+  clearCart as clearCartLib,
 } from "@/lib/cart"
 
 export function useCart() {
@@ -58,6 +59,19 @@ export function useCart() {
       return cart.reduce((total, item) => total + item.price * item.quantity, 0)
     }, [cart])
 
+  const clearCart = useCallback(() => {
+    // 1. Xóa trong localStorage (cần implement ở lib/cart.ts)
+    // 2. Set state rỗng
+    localStorage.removeItem("artee_user_data"); // Cách nhanh nhất: Xóa key
+    // Hoặc cách chuẩn hơn là update key đó về mảng rỗng
+    const userData = JSON.parse(localStorage.getItem("artee_user_data") || '{}');
+    userData.activeCart = [];
+    localStorage.setItem("artee_user_data", JSON.stringify(userData));
+    
+    setCart([]); // Cập nhật UI ngay lập tức
+    window.dispatchEvent(new Event("storage")); // Báo cho các tab khác
+  }, []);
+
   return {
     cart, // Giỏ hàng đang hoạt động
     isLoading,
@@ -66,6 +80,7 @@ export function useCart() {
     updateQuantity,
     getTotalPrice,
     checkout, // <-- Export hàm checkout
+    clearCart,
     cartCount: cart.reduce((total, item) => total + item.quantity, 0),
   }
 }

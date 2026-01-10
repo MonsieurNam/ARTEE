@@ -26,61 +26,6 @@ import { useToast } from "../ui/use-toast";
 import { SHIRT_ASSETS } from "@/lib/content";
 import VirtualTryOnModal from "../virtual-try-on-modal";
 
-
-/**
- * Hàm trộn ảnh nền áo và ảnh thiết kế
- * @param bgUrl URL ảnh áo gốc (trắng/xám)
- * @param overlayUrl URL ảnh thiết kế (trong suốt)
- * @param shirtColor Mã màu hex của áo
- */
-const mergeImages = (bgUrl: string, overlayUrl: string, shirtColor: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject('Không thể tạo context canvas');
-
-      const imgBg = new Image();
-      const imgOverlay = new Image();
-
-      imgBg.crossOrigin = "anonymous";
-      imgBg.src = bgUrl;
-      
-      imgBg.onload = () => {
-          // Set kích thước canvas bằng kích thước ảnh áo gốc
-          canvas.width = imgBg.width;
-          canvas.height = imgBg.height;
-
-          // 1. Vẽ nền áo và tô màu
-          // Vẽ áo gốc
-          ctx.drawImage(imgBg, 0, 0);
-          
-          // Nếu màu áo khác trắng (#ffffff), thực hiện tô màu
-          if (shirtColor.toLowerCase() !== '#ffffff') {
-              ctx.globalCompositeOperation = 'multiply';
-              ctx.fillStyle = shirtColor;
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              
-              // Cắt lại theo hình dáng áo gốc (giữ độ trong suốt bên ngoài áo)
-              ctx.globalCompositeOperation = 'destination-in';
-              ctx.drawImage(imgBg, 0, 0);
-          }
-
-          // Reset chế độ hòa trộn
-          ctx.globalCompositeOperation = 'source-over';
-
-          // 2. Vẽ lớp thiết kế lên trên
-          imgOverlay.src = overlayUrl;
-          imgOverlay.onload = () => {
-              // Vẽ đè lên toàn bộ kích thước (vì overlay đã được scale tương ứng khi export)
-              ctx.drawImage(imgOverlay, 0, 0, canvas.width, canvas.height);
-              resolve(canvas.toDataURL('image/png', 0.9)); // Chất lượng 90%
-          };
-          imgOverlay.onerror = (err) => reject(`Lỗi tải ảnh thiết kế: ${err}`);
-      };
-      imgBg.onerror = (err) => reject(`Lỗi tải ảnh nền áo: ${err}`);
-  });
-};
-
 interface RightPanelProps {
   selectedProduct: any;
   onProductChange: (product: any) => void;
@@ -162,129 +107,129 @@ export default function RightPanel({
   };
 
 
-  // --- HÀM VTO MỚI (ĐÃ FIX LỖI TYPESCRIPT) ---
+  // --- HÀM MỞ VTO ĐÃ ĐƯỢC CẬP NHẬT HOÀN TOÀN ---
   const handleOpenVtoModal = async () => {
     if (!canvas) {
       toast({ title: "Lỗi", description: "Canvas chưa sẵn sàng.", variant: "destructive" });
       return;
     }
 
-    // 1. Kiểm tra layer (Fix lỗi TS: cast sang any để đọc .data)
     const hasLayersOnThisSide = layers.some(l => l.side === activeSide);
-    if (!hasLayersOnThisSide) {
+    if (!hasLayersOnThisSide && activeSide === 'front') { // Chỉ kiểm tra mặt trước
        toast({
-         title: "Mặt áo trống",
-         description: `Vui lòng thêm hình hoặc chữ vào mặt ${activeSide === 'front' ? 'trước' : 'sau'} để thử đồ.`,
+         title: "Mặt trước trống",
+         description: `Vui lòng thêm chi tiết vào mặt trước trước khi thử đồ.`,
          variant: "destructive"
        });
        return;
     }
 
     setIsGeneratingPreview(true);
+    
+    // --- TĂNG ĐỘ PHÂN GIẢI ---
+    const PREVIEW_WIDTH = 800;  // Tăng từ 400
+    const PREVIEW_HEIGHT = 1000; // Tăng từ 500
+
+    // Tính toán tỷ lệ scale
+    const scaleX = PREVIEW_WIDTH / CANVAS_BASE_WIDTH;   // = 2
+    const scaleY = PREVIEW_HEIGHT / CANVAS_BASE_HEIGHT; // = 2
+    // --- KẾT THÚC TĂNG ĐỘ PHÂN GIẢI ---
+
+    // 1. Tạo canvas ảo
+    const virtualCanvas = new fabric.StaticCanvas(undefined, {
+      width: PREVIEW_WIDTH,
+      height: PREVIEW_HEIGHT,
+    });
+
+    // 2. Lấy JSON thiết kế
+    const designData = {
+      objects: canvas.getObjects().map(obj => obj.toObject(['data'])),
+    };
 
     try {
-      // 2. Lưu lại ảnh nền
-      const originalBg = canvas.backgroundImage;
-      
-      // Ẩn nền để chỉ lấy hình in
-      canvas.backgroundImage = undefined;
-      
-      // Ẩn các layer mặt khác (Fix lỗi TS tại đây)
-      canvas.getObjects().forEach(obj => {
-        // Ép kiểu obj thành any để truy cập .data
-        if ((obj as any).data?.side !== activeSide) {
-            obj.visible = false;
-        }
-      });
-      canvas.renderAll();
+      // 3. Nạp JSON vào canvas ảo
+      await virtualCanvas.loadFromJSON(designData);
 
-      // 3. Xuất ảnh thiết kế độ phân giải cao
-      const designDataUrl = canvas.toDataURL({
-        format: 'png',
-        quality: 1,
-        multiplier: 3, 
+      // --- THÊM BƯỚC QUAN TRỌNG: SCALE CÁC ĐỐI TƯỢNG ---
+      virtualCanvas.getObjects().forEach(obj => {
+        obj.set({
+          left: (obj.left ?? 0) * scaleX,
+          top: (obj.top ?? 0) * scaleY,
+          scaleX: (obj.scaleX ?? 1) * scaleX,
+          scaleY: (obj.scaleY ?? 1) * scaleY,
+        });
+        obj.setCoords();
       });
+      // --- KẾT THÚC BƯỚC SCALE ---
 
-      // 4. Khôi phục lại Canvas
-      canvas.backgroundImage = originalBg;
-      canvas.getObjects().forEach(obj => {
-        // Fix lỗi TS tại đây: Hiển thị lại đúng mặt
-        obj.visible = (obj as any).data?.side === activeSide; 
-      });
-      canvas.renderAll();
-
-      // 5. Lấy URL ảnh áo gốc
+      // 4. Tải ảnh nền (áo)
       const productType = selectedProduct.type || 'tee';
-      const shirtBgUrl = SHIRT_ASSETS[productType]?.[activeSide] || SHIRT_ASSETS['tee'].front;
+      const backgroundImageSrc =
+        SHIRT_ASSETS[productType]?.[activeSide] || SHIRT_ASSETS['tee'].front;
+      
+      const img = await fabric.Image.fromURL(backgroundImageSrc, { crossOrigin: 'anonymous' });
 
-      // 6. Ghép ảnh
-      const finalImage = await mergeImages(shirtBgUrl, designDataUrl, selectedProduct.color);
+      // 5. Áp filter màu
+      const colorFilter = new fabric.filters.BlendColor({
+        color: selectedProduct.color,
+        mode: 'tint',
+        alpha: 0.9,
+      });
+      img.filters?.push(colorFilter);
+      img.applyFilters();
 
-      // 7. Mở Modal
-      setVtoImageUrl(finalImage);
+      // 6. Scale và đặt ảnh nền
+      const canvasAspect = PREVIEW_WIDTH / PREVIEW_HEIGHT;
+      const imgAspect = img.width! / img.height!;
+      const bgScaleFactor =
+        canvasAspect > imgAspect
+          ? PREVIEW_HEIGHT / img.height!
+          : PREVIEW_WIDTH / img.width!;
+      const finalBgScale = bgScaleFactor * 0.9;
+
+      img.set({
+        scaleX: finalBgScale,
+        scaleY: finalBgScale,
+        originX: 'center',
+        originY: 'center',
+        left: PREVIEW_WIDTH / 2,
+        top: PREVIEW_HEIGHT / 2,
+      });
+      virtualCanvas.backgroundImage = img;
+
+      // 7. Ẩn/hiện đối tượng theo 'activeSide'
+      virtualCanvas.getObjects().forEach(obj => {
+        obj.set('visible', obj.data?.side === activeSide);
+      });
+
+      // 8. Chờ render
+      await new Promise<void>((resolve) => {
+        virtualCanvas.renderAll();
+        // Dùng setTimeout nhỏ để đảm bảo render hoàn tất
+        setTimeout(() => resolve(), 50); 
+      });
+
+      // 9. Xuất Data URI
+      const imageDataUrl = virtualCanvas.toDataURL({
+        format: 'png',
+        quality: 0.9, // Giữ chất lượng tốt
+        multiplier: 1,
+      });
+
+      // 10. Mở Modal
+      setVtoImageUrl(imageDataUrl);
       setIsVtoModalOpen(true);
 
     } catch (error) {
-      console.error("Lỗi tạo VTO:", error);
-      toast({ title: "Lỗi", description: "Không thể tạo ảnh thử đồ.", variant: "destructive"});
+      console.error("Lỗi khi tạo preview VTO:", error);
+      toast({ title: "Lỗi", description: "Không thể tạo ảnh xem trước.", variant: "destructive"});
     } finally {
+      virtualCanvas.dispose();
       setIsGeneratingPreview(false);
     }
   };
+  // --- KẾT THÚC HÀM VTO MỚI ---
 
-  // --- HÀM HỖ TRỢ GHÉP ẢNH (Thêm vào bên ngoài component hoặc bên trong đều được) ---
-  const mergeImages = (bgUrl: string, overlayUrl: string, shirtColor: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject('No context');
-
-        const imgBg = new Image();
-        const imgOverlay = new Image();
-
-        // Load ảnh nền áo trước
-        imgBg.crossOrigin = "anonymous";
-        imgBg.src = bgUrl;
-        
-        imgBg.onload = () => {
-            // Set kích thước canvas bằng kích thước ảnh áo gốc (để giữ độ nét cao nhất)
-            canvas.width = imgBg.width;
-            canvas.height = imgBg.height;
-
-            // 1. Vẽ màu áo (Sử dụng kỹ thuật tô màu blend)
-            // Vẽ áo gốc
-            ctx.drawImage(imgBg, 0, 0);
-            
-            // Tô màu: Vẽ một lớp màu phủ lên toàn bộ, sau đó dùng 'multiply' hoặc 'source-atop'
-            // Tuy nhiên, cách đơn giản nhất cho MVP là vẽ ảnh áo đã được xử lý màu.
-            // Nhưng ở đây ta đang dùng ảnh gốc (trắng/xám).
-            // Mẹo: Vẽ một hình chữ nhật màu đè lên, dùng blend mode 'multiply'
-            ctx.globalCompositeOperation = 'multiply';
-            ctx.fillStyle = shirtColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Reset blend mode để vẽ lại chính ảnh gốc đè lên (giữ lại nếp nhăn/bóng đổ)
-            // Kỹ thuật này gọi là "Luminosity preserving" đơn giản
-            ctx.globalCompositeOperation = 'destination-in';
-            ctx.drawImage(imgBg, 0, 0);
-
-            // Reset hoàn toàn để vẽ hình in
-            ctx.globalCompositeOperation = 'source-over';
-
-            // 2. Load và vẽ hình in (Design)
-            imgOverlay.src = overlayUrl;
-            imgOverlay.onload = () => {
-                // Vẽ hình in đè lên chính giữa
-                // Vì designDataUrl được xuất từ toàn bộ canvas, nên ta chỉ cần vẽ nó full size
-                // Tuy nhiên cần lưu ý tỷ lệ aspect ratio
-                ctx.drawImage(imgOverlay, 0, 0, canvas.width, canvas.height);
-                
-                resolve(canvas.toDataURL('image/png'));
-            };
-        };
-        imgBg.onerror = reject;
-    });
-  };
 
   // HÀM TẢI THIẾT KẾ (FABRIC V6) - (Không thay đổi)
   const handleDownloadDesign = async (side: 'front' | 'back') => {
@@ -360,7 +305,7 @@ export default function RightPanel({
       console.log("[v6] Đặt ảnh nền thành công.");
       
       virtualCanvas.getObjects().forEach(obj => {
-        obj.set('visible', (obj as any).data?.side === side);
+        obj.set('visible', obj.data?.side === side);
       });
       console.log("[v6] Đã ẩn/hiện đối tượng theo mặt áo.");
 

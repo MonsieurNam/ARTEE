@@ -1,4 +1,4 @@
-// components/contact-section.tsx
+// components/ContactSection.tsx
 "use client"
 
 import { useState } from "react";
@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { Mail, Phone, MapPin, Loader2, Send } from "lucide-react";
 
+// Dữ liệu tĩnh hiển thị bên trái (không đổi)
 const contactDetails = [
   {
     icon: <MapPin className="w-5 h-5 text-primary" />,
@@ -39,10 +40,12 @@ export default function ContactSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
+
+    // 1. Validate phía Client
+    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
       toast({
-        title: "Lỗi",
-        description: "Vui lòng điền đầy đủ thông tin.",
+        title: "Thiếu thông tin",
+        description: "Vui lòng điền đầy đủ Họ tên, Email và Lời nhắn.",
         variant: "destructive",
       });
       return;
@@ -50,20 +53,46 @@ export default function ContactSection() {
 
     setIsSubmitting(true);
 
-    // Giả lập việc gửi form đến API
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // 2. Gọi API Route vừa tạo ở Bước 1
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-    setIsSubmitting(false);
-    setFormData({ name: "", email: "", message: "" }); // Reset form
-    
-    toast({
-      title: "Gửi thành công!",
-      description: "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm nhất có thể.",
-    });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Có lỗi xảy ra khi gửi tin nhắn.");
+      }
+
+      // 3. Xử lý khi thành công
+      toast({
+        title: "Gửi thành công! 🎉",
+        description: "Cảm ơn bạn đã liên hệ. Chúng tôi sẽ phản hồi sớm qua Email.",
+        variant: "default", // Hoặc dùng class text-green-600 nếu custom
+      });
+
+      // Reset form
+      setFormData({ name: "", email: "", message: "" });
+
+    } catch (error) {
+      // 4. Xử lý khi thất bại
+      console.error("Contact Form Error:", error);
+      toast({
+        title: "Gửi thất bại",
+        description: error instanceof Error ? error.message : "Vui lòng thử lại sau hoặc liên hệ qua Zalo.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    // QUAN TRỌNG: Gán id="contact" cho section này
     <section id="contact" className="w-full py-24 md:py-32 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
         {/* Section Header */}
@@ -99,23 +128,59 @@ export default function ContactSection() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">Họ và tên</label>
-                  <Input id="name" name="name" type="text" placeholder="Tên của bạn" value={formData.name} onChange={handleInputChange} required />
+                  <Input 
+                    id="name" 
+                    name="name" 
+                    type="text" 
+                    placeholder="Tên của bạn" 
+                    value={formData.name} 
+                    onChange={handleInputChange} 
+                    required 
+                    disabled={isSubmitting}
+                  />
                 </div>
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">Email</label>
-                  <Input id="email" name="email" type="email" placeholder="email@example.com" value={formData.email} onChange={handleInputChange} required />
+                  <Input 
+                    id="email" 
+                    name="email" 
+                    type="email" 
+                    placeholder="email@example.com" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    required 
+                    disabled={isSubmitting}
+                  />
                 </div>
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">Lời nhắn</label>
-                  <Textarea id="message" name="message" placeholder="Bạn muốn nói gì với chúng tôi?" value={formData.message} onChange={handleInputChange} rows={5} required />
+                  <Textarea 
+                    id="message" 
+                    name="message" 
+                    placeholder="Bạn muốn nói gì với chúng tôi?" 
+                    value={formData.message} 
+                    onChange={handleInputChange} 
+                    rows={5} 
+                    required 
+                    disabled={isSubmitting}
+                  />
                 </div>
-                <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+                <Button 
+                  type="submit" 
+                  className="w-full gap-2 text-base py-6 font-medium transition-all" 
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Đang gửi...
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Đang gửi tin nhắn...
                     </>
-                  ) : "Gửi tin nhắn"}
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Gửi tin nhắn
+                    </>
+                  )}
                 </Button>
               </form>
             </Card>

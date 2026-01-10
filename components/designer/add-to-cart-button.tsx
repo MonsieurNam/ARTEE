@@ -9,6 +9,7 @@ import { CUSTOM_PRODUCT_PRICE } from "@/lib/constants";
 import { ShoppingCart, ArrowRight, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation"; // Import Router để chuyển trang
 import { useState } from "react";
+import { dataURLtoFile, uploadToCloudinary } from "@/lib/image-helper";
 
 interface AddToCartButtonProps {
   selectedProduct: {
@@ -26,11 +27,10 @@ export default function AddToCartButton({ selectedProduct }: AddToCartButtonProp
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAddToCart = async () => {
-    // 1. Validate: Kiểm tra xem có thiết kế chưa
     if (!canvas || layers.length === 0) {
       toast({
         title: "Thiết kế trống",
-        description: "Vui lòng thêm ít nhất một chi tiết (Chữ hoặc Ảnh) vào áo.",
+        description: "Vui lòng thêm chi tiết vào áo.",
         variant: "destructive",
       });
       return;
@@ -39,37 +39,39 @@ export default function AddToCartButton({ selectedProduct }: AddToCartButtonProp
     setIsProcessing(true);
 
     try {
-      // 2. Lấy dữ liệu thiết kế từ canvas
-      // Đợi một chút để đảm bảo UI không bị giật
+      // Đợi render UI
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const designJSON = JSON.stringify(canvas.toJSON()); // Lưu thêm thuộc tính 'data' (id, side...)
-      
-      // Xuất ảnh preview chất lượng tốt hơn một chút để gửi shop xem rõ
-      const previewImage = canvas.toDataURL({
+      const designJSON = JSON.stringify(canvas.toJSON()); // Lưu metadata
+
+      // 1. Xuất ảnh preview từ Canvas (Base64 chất lượng cao)
+      const previewBase64 = canvas.toDataURL({
           format: 'png', 
-          quality: 1,
-          multiplier: 2 // Tăng độ phân giải ảnh preview lên gấp đôi
+          quality: 0.9,
+          multiplier: 1.5 // Giữ mức vừa phải, đừng quá cao
       });
 
-      // 3. Gọi hàm addToCart
+      // 2. BƯỚC MỚI: Upload Preview lên Cloudinary
+      // Chuyển Base64 -> File -> Upload -> Lấy URL
+      const previewFile = dataURLtoFile(previewBase64, `cart-preview-${Date.now()}.png`);
+      const previewUrl = await uploadToCloudinary(previewFile);
+
+      // 3. Lưu vào Cart (Lưu URL thay vì Base64)
       addToCart({
         type: "custom",
-        product: selectedProduct, // type, color, size
+        product: selectedProduct,
         designJSON,
-        previewImage,
+        previewImage: previewUrl, // URL Cloudinary (Siêu nhẹ khi lưu text)
         quantity: 1,
         price: CUSTOM_PRODUCT_PRICE,
       });
 
-      // 4. Thông báo và Chuyển hướng
       toast({
         title: "Đã lưu thiết kế!",
-        description: "Đang chuyển bạn đến trang gửi yêu cầu...",
+        description: "Đang chuyển đến báo giá...",
         duration: 2000,
       });
 
-      // Chuyển hướng sang trang Cart sau 1s để user kịp đọc thông báo
       setTimeout(() => {
         router.push("/cart");
       }, 1000);
@@ -78,9 +80,10 @@ export default function AddToCartButton({ selectedProduct }: AddToCartButtonProp
       console.error("Lỗi khi lưu thiết kế:", error);
       toast({
         title: "Có lỗi xảy ra",
-        description: "Không thể lưu thiết kế. Vui lòng thử lại.",
+        description: "Không thể upload ảnh xem trước. Vui lòng thử lại.",
         variant: "destructive",
       });
+    } finally {
       setIsProcessing(false);
     }
   };

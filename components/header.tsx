@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Menu, X, FileText } from "lucide-react" // Import thêm FileText nếu muốn đổi icon, hoặc giữ ShoppingCart
+import { ShoppingCart, Menu, X, FileText, Package } from "lucide-react" // Import thêm FileText nếu muốn đổi icon, hoặc giữ ShoppingCart
 import { useCart } from "@/hooks/use-cart"
 import { useAuth } from "@/components/providers/auth-provider";
 import { 
@@ -105,7 +105,13 @@ export default function Header() {
                 <DropdownMenuContent align="end">
                   <Link href="/profile">
                     <DropdownMenuItem className="gap-2 cursor-pointer">
-                      <UserIcon className="w-4 h-4" /> Hồ sơ của tôi
+                      <UserIcon className="w-4 h-4" /> Hồ sơ thiết kế
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/orders">
+                    <DropdownMenuItem className="cursor-pointer">
+                      <Package className="mr-2 h-4 w-4" /> 
+                      <span>Lịch sử đơn hàng</span>
                     </DropdownMenuItem>
                   </Link>
                   <DropdownMenuItem onClick={logout} className="gap-2 text-red-600 cursor-pointer">
