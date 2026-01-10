@@ -146,12 +146,7 @@ export default function CartPage() {
             </div>
             
             {/* Order Summary */}
-            <OrderSummary
-              primaryActionText="Tiến hành thanh toán"
-              primaryActionHref="/checkout"
-              secondaryActionText="Thiết kế thêm"
-              secondaryActionHref="/customizer"
-            />
+            <OrderSummary />
           </div>
         )}
       </div>

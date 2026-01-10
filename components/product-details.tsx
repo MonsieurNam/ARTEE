@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import type { Product } from "@/lib/content"
 import { useToast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import ARModal from "@/components/ar-modal"
 import { useCart } from "@/hooks/use-cart"
@@ -74,15 +75,24 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         quantity: quantity,
         price: unitPrice,
       })
+
+      // Cập nhật thông báo phù hợp với ngữ cảnh Báo giá
       toast({
-        title: "Thành công",
-        description: `${product.name} đã được thêm vào giỏ hàng`,
+        title: "Đã thêm vào danh sách báo giá",
+        description: `Bạn đã chọn: ${product.name} (${selectedSize.name}).`,
+        action: (
+          <ToastAction altText="Xem danh sách" onClick={() => router.push("/cart")}>
+            Xem danh sách
+          </ToastAction>
+        ),
       })
-      router.push("/cart")
+      
+      // Xóa dòng router.push("/cart") để người dùng có thể xem thêm sản phẩm khác nếu muốn
+      // router.push("/cart") 
     } catch (error) {
       toast({
         title: "Lỗi",
-        description: "Không thể thêm vào giỏ hàng",
+        description: "Không thể thêm vào danh sách",
         variant: "destructive",
       })
     }
@@ -389,7 +399,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             )}
             <div className="border-t-2 border-neutral-200 pt-3 flex justify-between items-center">
               <span className="font-bold text-foreground text-lg">
-                Tổng cộng
+                Tạm tính
               </span>
               <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 {new Intl.NumberFormat("vi-VN", {
@@ -398,6 +408,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 }).format(unitPrice * quantity)}
               </span>
             </div>
+            <p className="text-xs text-center text-muted-foreground italic pt-1">
+              *Giá cuối cùng và phí vận chuyển sẽ được chốt khi tư vấn.
+            </p>
           </Card>
 
           {/* --- Add to Cart Button --- */}
@@ -406,7 +419,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             className="w-full gap-3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white py-7 text-lg font-bold shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] rounded-xl"
           >
             <ShoppingCart className="w-6 h-6" />
-            Thêm vào giỏ hàng
+            Thêm vào danh sách báo giá
           </Button>
 
           {/* --- VTO Button --- */}

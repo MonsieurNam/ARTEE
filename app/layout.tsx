@@ -6,6 +6,7 @@ import { Inter, Roboto_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import AuthProvider from "@/components/providers/auth-provider"; 
 
 // THAY ĐỔI: Khởi tạo Inter với subset 'vietnamese' và gán biến CSS
 const inter = Inter({ 
@@ -31,14 +32,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  
   return (
     <html lang="en">
-      {/* THAY ĐỔI: Áp dụng các biến font vào thẻ body */}
       <body className={`${inter.variable} ${roboto_mono.variable} font-sans antialiased`}>
-        {children}
-        <Analytics />
-        <Toaster />
+        {/* BỌC AUTH PROVIDER Ở ĐÂY */}
+        <AuthProvider>
+          {children}
+          <Analytics />
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   )

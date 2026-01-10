@@ -10,3 +10,13 @@ export const PRODUCT_NAMES: Record<string, string> = {
   hoodie: "Hoodie",
   polo: "Polo",
 }
+
+// lib/constants.ts
+
+export const SHOP_CONTACT = {
+  phone: "0985029160", // Số điện thoại
+  zalo: "https://zalo.me/0325235826", // Link Zalo
+  messenger: "https://www.facebook.com/profile.php?id=61586419133991", // Link Messenger (ví dụ)
+  email: "namnguyenfnw@gmail.com",
+  shopName: "ARTee Store"
+};

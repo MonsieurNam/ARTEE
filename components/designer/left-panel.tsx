@@ -10,12 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from "@/components/ui/input";
-import { FileText, ImageIcon, Save, Trash2, Copy, FilePlus } from "lucide-react";
+import { FileText, ImageIcon, Save, Trash2, Copy, FilePlus, Loader2, LogIn } from "lucide-react";
 import LayerItem from "./layer-item";
 import * as projectLocal from '@/lib/services/project-local';
 import { ProjectData } from '@/lib/designer-storage';
 import { useToast } from "@/components/ui/use-toast";
 import LogoLibrary from './logo-library';
+import { useAuth } from "@/components/providers/auth-provider"; // Hook lấy user
+import { saveProjectCloud, updateProjectCloud, getUserProjects, deleteProjectCloud, type CloudProject } from "@/lib/services/project-cloud";
+import Link from "next/link";
+import { Separator } from '../ui/separator';
 
 interface LeftPanelProps {
     selectedProduct: { type: string; color: string; size: string; };
@@ -42,7 +46,116 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
   const [newProjectName, setNewProjectName] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
+  const [isUploading, setIsUploading] = useState(false);
+  const { user } = useAuth();
+  
+  // 2. State cho Cloud Projects
+  const [cloudProjects, setCloudProjects] = useState<CloudProject[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
+
+  // 3. Load dự án khi user thay đổi (đăng nhập/đăng xuất)
+  useEffect(() => {
+    if (user) {
+      loadCloudProjects();
+    } else {
+      setCloudProjects([]); // Xóa list nếu logout
+    }
+  }, [user]);
+
+  const loadCloudProjects = async () => {
+    if (!user) return;
+    setIsLoadingProjects(true);
+    try {
+      const projects = await getUserProjects(user.uid);
+      setCloudProjects(projects);
+    } catch (error) {
+      toast({ title: "Lỗi", description: "Không thể tải danh sách dự án.", variant: "destructive" });
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  // 4. Hàm Lưu/Cập nhật MỚI (Cloud)
+  const handleSaveOrUpdateProject = async () => {
+    if (!canvas) return;
+    
+    // Nếu chưa đăng nhập -> Chặn lại
+    if (!user) {
+        toast({ title: "Yêu cầu đăng nhập", description: "Bạn cần đăng nhập để lưu thiết kế.", variant: "destructive" });
+        return;
+    }
+
+    if (!activeProjectId && !newProjectName.trim()) {
+      toast({ title: "Thiếu tên", description: "Vui lòng đặt tên cho thiết kế.", variant: "destructive" });
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+        // Chuẩn bị dữ liệu
+        const designData = {
+            version: fabric.version,
+            objects: canvas.getObjects().map(obj => obj.toObject(['data']))
+        };
+        const jsonString = JSON.stringify(designData);
+        // Lưu ảnh preview nhỏ để load nhanh danh sách
+        const previewUrl = canvas.toDataURL({ format: 'png', quality: 0.8, multiplier: 0.2 }); 
+
+        if (activeProjectId) {
+            // Cập nhật
+            await updateProjectCloud(activeProjectId, {
+                json: jsonString,
+                previewImage: previewUrl,
+                product: selectedProduct
+            });
+            toast({ title: "Thành công", description: "Đã cập nhật dự án trên Cloud." });
+        } else {
+            // Lưu mới
+            const newProj = await saveProjectCloud({
+                uid: user.uid,
+                title: newProjectName,
+                json: jsonString,
+                previewImage: previewUrl,
+                product: selectedProduct
+            });
+            setActiveProjectId(newProj.id); // Set ID mới trả về từ Cloud
+            setNewProjectName('');
+            setIsModalOpen(false);
+            toast({ title: "Thành công", description: "Đã lưu thiết kế mới." });
+        }
+        
+        // Reload danh sách
+        loadCloudProjects();
+
+    } catch (error) {
+        console.error(error);
+        toast({ title: "Lỗi lưu trữ", description: "Không thể lưu lên Cloud lúc này.", variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  // 5. Hàm Xóa (Cloud)
+  const handleDeleteCloudProject = async (id: string) => {
+      if(!confirm("Bạn chắc chắn muốn xóa?")) return;
+      await deleteProjectCloud(id);
+      if(activeProjectId === id) setActiveProjectId(null);
+      loadCloudProjects();
+      toast({ title: "Đã xóa", description: "Dự án đã bị xóa vĩnh viễn." });
+  }
+
+  // 6. Hàm Load Project vào Canvas (Cloud)
+  const handleLoadCloudProject = (proj: CloudProject) => {
+      if(!confirm("Tải dự án này? Thay đổi chưa lưu sẽ mất.")) return;
+      
+      useDesignStore.getState().startLoadingProject(proj.json);
+      if (proj.id) setActiveProjectId(proj.id);
+      onProductChange(proj.product); // Cập nhật màu áo/loại áo
+  };
+  
   useEffect(() => {
     refreshProjects();
   }, []);
@@ -72,26 +185,88 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     canvas.renderAll();
   };
 
+  // Hàm xử lý upload ảnh mới
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas) return;
+    
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        if (event.target?.result) {
-          try {
-            const img = await fabric.Image.fromURL(event.target.result as string, { crossOrigin: 'anonymous' });
-            img.scaleToWidth(150);
-            (img as any).data = { id: `image-${Date.now()}`, side: activeSide };
+    if (!file) return;
+
+    // Validate kích thước (Client side) - Ví dụ giới hạn 5MB
+    if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "Ảnh quá lớn", description: "Vui lòng chọn ảnh dưới 5MB.", variant: "destructive" });
+        return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // 1. Tạo FormData để gửi lên API
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // 2. Gọi API Upload (Route chúng ta vừa tạo ở Bước 1)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Upload thất bại');
+      }
+
+      // 3. Có URL rồi, thêm vào Canvas
+      // Lưu ý: Dùng URL từ Cloudinary thay vì Base64
+      const imgUrl = data.url;
+
+      fabric.Image.fromURL(imgUrl, { crossOrigin: 'anonymous' })
+        .then((img) => {
+            // Tinh chỉnh kích thước ảnh cho vừa canvas (ví dụ: max 50% chiều rộng canvas)
+            const canvasWidth = canvas.width || 400;
+            const targetWidth = canvasWidth * 0.5;
+            const scale = targetWidth / (img.width || 1);
+            
+            img.set({
+                scaleX: scale,
+                scaleY: scale,
+                left: canvasWidth / 2, // Căn giữa
+                top: (canvas.height || 500) / 2,
+                originX: 'center',
+                originY: 'center'
+            });
+
+            // Gắn metadata
+            (img as any).data = { 
+                id: `image-${Date.now()}`, 
+                side: activeSide,
+                // Lưu lại URL gốc để phòng hờ sau này cần
+                src: imgUrl 
+            };
+
             canvas.add(img);
-            canvas.centerObject(img);
             canvas.setActiveObject(img);
             canvas.renderAll();
-          } catch (error) { console.error("Lỗi tải ảnh:", error); }
-        }
-      };
-      reader.readAsDataURL(file);
-      e.target.value = '';
+            
+            toast({ title: "Thành công", description: "Đã thêm ảnh vào thiết kế." });
+        })
+        .catch(err => {
+            console.error("Lỗi add ảnh vào canvas:", err);
+            toast({ title: "Lỗi hiển thị", description: "Không thể vẽ ảnh lên canvas.", variant: "destructive" });
+        });
+
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({ 
+        title: "Lỗi tải ảnh", 
+        description: error instanceof Error ? error.message : "Đã có lỗi xảy ra.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset input để cho phép chọn lại cùng 1 file nếu muốn
+      e.target.value = ''; 
     }
   };
 
@@ -121,7 +296,7 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
     }
   };
 
-  const handleSaveOrUpdateProject = () => {
+  const handleSaveOrUpdateLocalProject = () => {
     if (!canvas) {
       toast({ title: "Lỗi", description: "Canvas chưa sẵn sàng.", variant: "destructive" });
       return;
@@ -225,15 +400,40 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
           <TabsTrigger value="projects">Dự án</TabsTrigger>
         </TabsList>
         <TabsContent value="layers" className="flex-1 p-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" className="gap-2" onClick={handleAddText}>
-              <FileText className="w-4 h-4" /> Thêm Chữ
-            </Button>
-            <label htmlFor="image-upload-btn" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 cursor-pointer">
-              <ImageIcon className="w-4 h-4" /> Tải Ảnh
-            </label>
-            <input id="image-upload-btn" type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/>
-          </div>
+          {/* --- NÚT UPLOAD MỚI --- */}
+            <div className="relative">
+                <Button 
+                    variant="outline" 
+                    className="w-full gap-2 relative" 
+                    disabled={isUploading}
+                    asChild={!isUploading} // Chỉ render asChild (label) khi không loading
+                >
+                    {isUploading ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang tải...
+                        </>
+                    ) : (
+                        <label 
+                            htmlFor="image-upload-btn" 
+                            className="w-full h-full flex items-center justify-center cursor-pointer"
+                        >
+                            <ImageIcon className="w-4 h-4 mr-2" /> 
+                            Tải Ảnh
+                        </label>
+                    )}
+                </Button>
+                
+                {/* Input file ẩn */}
+                <input 
+                    id="image-upload-btn" 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handleImageUpload}
+                    disabled={isUploading}
+                />
+            </div>
 
           <p className="text-sm font-medium text-muted-foreground">Danh sách lớp ({activeSide === 'front' ? 'Mặt trước' : 'Mặt sau'})</p>
           <div className="space-y-2 overflow-y-auto flex-1">
@@ -264,73 +464,101 @@ export default function LeftPanel({ selectedProduct, onProductChange }: LeftPane
         </TabsContent>
 
         <TabsContent value="projects" className="flex-1 p-4 flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-2">
-            <Button className="gap-2" onClick={handleNewProject} variant="outline">
-              <FilePlus className="w-4 h-4" /> Thiết kế mới
-            </Button>
-            {activeProjectId ? (
-              <Button className="gap-2 w-full" disabled={layers.length === 0} onClick={handleSaveOrUpdateProject}>
-                <Save className="w-4 h-4" /> Cập nhật dự án
-              </Button>
-            ) : (
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2 w-full" disabled={layers.length === 0}>
-                    <Save className="w-4 h-4" /> Lưu dự án
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader><DialogTitle>Đặt tên cho dự án của bạn</DialogTitle></DialogHeader>
-                  <Input 
-                    placeholder="Ví dụ: Áo nhóm mùa hè..." 
-                    value={newProjectName} 
-                    onChange={(e) => setNewProjectName(e.target.value)} 
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveOrUpdateProject()}
-                  />
-                  <DialogFooter>
-                    <Button onClick={handleSaveOrUpdateProject}>Lưu</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
+          {/* Nút Tạo mới luôn hiện */}
+          <Button className="gap-2 w-full" onClick={handleNewProject} variant="outline">
+              <FilePlus className="w-4 h-4" /> Thiết kế mới (Reset)
+          </Button>
 
-          <p className="text-sm font-medium text-muted-foreground">Các dự án đã lưu</p>
-          <div className="space-y-2 overflow-y-auto flex-1">
-            {projects.length > 0 ? (
-              projects.map(p => (
-                <div
-                  key={p.id}
-                  className={`group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors ${
-                    p.id === activeProjectId ? 'bg-primary/10 border-primary' : ''
-                  }`}
-                >
-                  <img
-                    src={p.previewImage}
-                    alt={p.title}
-                    className="w-12 h-12 flex-shrink-0 rounded-md object-cover border bg-white cursor-pointer"
-                    onClick={() => handleLoadProject(p)}
-                  />
-                  <div className="flex-1 min-w-0" onClick={() => handleLoadProject(p)}>
-                    <p className="text-sm font-semibold truncate cursor-pointer">{p.title}</p>
-                    <p className="text-xs text-muted-foreground">{new Date(p.updatedAt).toLocaleString('vi-VN')}</p>
-                  </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                    onClick={() => handleDeleteProject(p.id, p.title)}
-                  >
-                    <Trash2 className="w-4 h-4 text-destructive" />
+          {/* Phần trạng thái Đăng nhập */}
+          {!user ? (
+            <div className="flex flex-col items-center justify-center flex-1 space-y-4 p-6 border-2 border-dashed rounded-xl bg-gray-50">
+                <p className="text-center text-muted-foreground text-sm">Đăng nhập để lưu và quản lý các thiết kế của bạn trên mọi thiết bị.</p>
+                <Link href="/login">
+                    <Button className="gap-2">
+                        <LogIn className="w-4 h-4" /> Đăng nhập ngay
+                    </Button>
+                </Link>
+            </div>
+          ) : (
+            <>
+                {/* Nút Lưu/Cập nhật */}
+                {activeProjectId ? (
+                  <Button className="gap-2 w-full" onClick={handleSaveOrUpdateProject} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : <Save className="w-4 h-4" />} 
+                    Cập nhật dự án đang sửa
                   </Button>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-xs text-muted-foreground p-4 border-dashed border-2 rounded-lg h-full flex flex-col justify-center items-center">
-                <p>Bạn chưa có dự án nào được lưu.</p>
-              </div>
-            )}
-          </div>
+                ) : (
+                  <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2 w-full" disabled={layers.length === 0}>
+                        <Save className="w-4 h-4" /> Lưu dự án mới
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader><DialogTitle>Đặt tên cho thiết kế</DialogTitle></DialogHeader>
+                      <Input 
+                        placeholder="Ví dụ: Áo lớp A1..." 
+                        value={newProjectName} 
+                        onChange={(e) => setNewProjectName(e.target.value)} 
+                        disabled={isSaving}
+                      />
+                      <DialogFooter>
+                        <Button onClick={handleSaveOrUpdateProject} disabled={isSaving}>
+                            {isSaving && <Loader2 className="animate-spin w-4 h-4 mr-2"/>} Lưu lại
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                )}
+
+                <Separator className="my-2" />
+
+                {/* Danh sách dự án */}
+                <p className="text-sm font-medium text-muted-foreground">Thiết kế của bạn ({cloudProjects.length})</p>
+                
+                {isLoadingProjects ? (
+                    <div className="flex justify-center p-4"><Loader2 className="animate-spin"/></div>
+                ) : (
+                    <div className="space-y-2 overflow-y-auto flex-1 max-h-[300px]">
+                        {cloudProjects.length > 0 ? (
+                        cloudProjects.map(p => (
+                            <div
+                            key={p.id}
+                            className={`group flex items-center gap-3 p-2 rounded-lg border hover:bg-gray-50 transition-colors ${
+                                p.id === activeProjectId ? 'bg-primary/10 border-primary' : ''
+                            }`}
+                            >
+                            <img
+                                src={p.previewImage}
+                                alt={p.title}
+                                className="w-12 h-12 flex-shrink-0 rounded-md object-cover border bg-white cursor-pointer"
+                                onClick={() => handleLoadCloudProject(p)}
+                            />
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleLoadCloudProject(p)}>
+                                <p className="text-sm font-semibold truncate">{p.title}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {p.updatedAt?.seconds ? new Date(p.updatedAt.seconds * 1000).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                                </p>
+                            </div>
+                            <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 opacity-0 group-hover:opacity-100 flex-shrink-0 text-destructive hover:text-red-700"
+                                onClick={() => handleDeleteCloudProject(p.id!)}
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </Button>
+                            </div>
+                        ))
+                        ) : (
+                        <div className="text-center text-xs text-muted-foreground py-8">
+                            Chưa có thiết kế nào.
+                        </div>
+                        )}
+                    </div>
+                )}
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </Card>

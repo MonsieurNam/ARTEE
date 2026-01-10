@@ -4,29 +4,19 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Helper để xử lý chuỗi Base64 Data URI từ client.
- * Nó sẽ tách mediaType và dữ liệu Base64 thuần.
  */
 function parseDataUri(dataUri: string) {
-  // Cắt bỏ "data:"
-  const content = dataUri.substring(5); // vd: "image/png;base64,iVBORw0..."
-  
+  const content = dataUri.substring(5);
   const parts = content.split(',');
   if (parts.length < 2) {
-    throw new Error('Định dạng Data URI không hợp lệ. Thiếu dấu phẩy.');
-  }
-
-  const header = parts[0]; // vd: "image/png;base64"
-  const data = parts[1]; // vd: "iVBORw0..."
-  
-  if (!header || !data) {
     throw new Error('Định dạng Data URI không hợp lệ.');
   }
-  
+  const header = parts[0];
+  const data = parts[1];
   const mediaType = header.split(';')[0] || 'image/png';
   const buffer = Buffer.from(data, 'base64');
   return { buffer, mediaType };
 }
-// --- KẾT THÚC HÀM HELPER ---
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,50 +28,61 @@ export async function POST(request: NextRequest) {
 
     if (!userImage || !mockupImage || !productPose) {
       return NextResponse.json(
-        { error: 'Thiếu userImage, mockupImage hoặc productPose (front/back)' },
+        { error: 'Thiếu userImage, mockupImage hoặc productPose' },
         { status: 400 },
       );
     }
 
-    // 1. Xử lý ảnh đầu vào (Dùng hàm mới)
+    // 1. Xử lý ảnh đầu vào
     const parsedUserImage = parseDataUri(userImage);
     const parsedMockupImage = parseDataUri(mockupImage);
 
-    // 2. Xây dựng "Prompt Thông minh" (Không đổi)
+    // 2. Xây dựng "Prompt Thông minh" (Đã cập nhật để chống cắt ảnh)
+    // Thay đổi chính nằm ở phần "GENERATION RULES"
     const smartPrompt = `
-      You are an expert AI "Virtual Try-On" specialist for the ARTEE fashion brand.
-        I will provide 3 inputs:
-        1.  [Image 1: Person's Photo] (Đây là người sẽ mặc quần áo mới).
-        2.  [Image 2: Garment Photo] (Đây là TOÀN BỘ sản phẩm quần áo - áo thun, hoodie, v.v. - để mặc. Nó KHÔNG PHẢI chỉ là một logo hay thiết kế).
-        3.  A text variable 'productPose'. The current productPose is: "${productPose}".
+        You are an expert AI fashion visualization specialist in Fashion Inpainting.
+        
+        **INPUTS:**
+        1. [Image 1]: User's photo (The person who will wear the clothes).
+        2. [Image 2]: Garment photo (The standalone clothing item).
+        3. Pose context: "${productPose}" (front/back).
 
-        **TASK 1: VALIDATION (Most Important)**
-        -   Analyze [Image 1: Person's Photo] to see if it is a 'front' view or 'back' view.
-        -   Compare this detected pose to the 'productPose' variable ("${productPose}").
+        **TASK 1: SAFETY & VALIDATION**
+        - Analyze [Image 1]. If it contains explicit nudity or is not a person, output text: "Lỗi: Ảnh không hợp lệ."
+        - Check pose consistency. If User is '${productPose}' but garment is opposite, output text: "Lỗi: Hướng ảnh không khớp (Trước/Sau)."
 
-        **TASK 2: ACTION**
+        **TASK 2: VIRTUAL TRY-ON GENERATION**
+        If validation passes, generate a photorealistic image where the user in [Image 1] is wearing the garment from [Image 2].
 
-        * **IF POSES DO NOT MATCH** (e.g., user is 'front' but 'productPose' is 'back'):
-            1.  DO NOT generate an image.
-            2.  Your ONLY output must be a single, brief text sentence in VIETNAMESE explaining the mismatch.
-            3.  Example: "Lỗi: Ảnh của bạn là mặt trước, nhưng áo đang ở mặt sau. Vui lòng tải ảnh phù hợp."
+        **CRITICAL CONSTRAINTS (MUST FOLLOW):**
+        1.  **NO CROPPING (ZERO TOLERANCE):** 
+            -   The output image **MUST** have the **EXACT SAME ASPECT RATIO and COMPOSITION** as [Image 1].
+            -   **DO NOT** zoom in on the torso. 
+            -   **DO NOT** cut off the head, legs, or feet if they are visible in [Image 1].
+            -   If [Image 1] is a full-body shot, the output MUST be a full-body shot.
+            -    **KEEP ORIGINAL DIMENSIONS:** The output image MUST act as a layer on top of [Image 1]. It must have the **EXACT SAME aspect ratio** (width/height) as [Image 1].
+            -  **NO OUTPAINTING:** Do NOT add, invent, or extend the background horizontally or vertically. If [Image 1] is a tall portrait (e.g., 9:16), the output MUST be a tall portrait (9:16). Do NOT make it square.
+            -  **NO ZOOM/CROP:** The user's head and feet must remain in the exact same pixel coordinates as in [Image 1].
 
-        * **IF POSES MATCH:**
-            1.  Your task is to digitally **REPLACE** (thay thế) quần áo mà người trong [Image 1] đang mặc bằng **TOÀN BỘ SẢN PHẨM** (entire garment) từ [Image 2].
-            2.  **Generation Rules:**
-                * You MUST preserve the person's face, hair, skin tone, pose, and the background 100% exactly as in [Image 1].
-                * You MUST take the **entire clothing item** from [Image 2] (ví dụ: nguyên cái áo thun, chứ không phải chỉ logo của nó) và điều chỉnh (warp/drape) nó một cách thực tế lên cơ thể của người trong [Image 1].
-                * Quần áo gốc trong [Image 1] (áo họ đang mặc) phải được **che phủ HOÀN TOÀN** bởi sản phẩm mới từ [Image 2].
-            3.  DO NOT change the person's face, hair, or pose.
-            4.  DO NOT change the background.
-            5.  Your ONLY output must be the final generated image. Do not add any text.
-    `;
+        2.  **PRESERVATION:**
+            -   Keep the user's face, hair, skin tone, body shape, and pose **100% identical**.
+            -   Keep the background **100% identical**.
+            -   Keep the lower body clothing (pants, skirt, shoes) **exactly as they are**.
 
-    // 3. Gọi API qua Vercel AI Gateway (Không đổi)
+        3.  **REALISTIC BLENDING:**
+            -   Warp and drape the garment from [Image 2] naturally onto the user's upper body.
+            -   Match the lighting and shadows of [Image 1].
+            -   Ensure the new garment completely covers the original shirt the user was wearing.
+
+        **OUTPUT:**
+        -   Return ONLY the generated image. Do not add any text or explanation if successful.
+    `;
+
+    // 3. Gọi API qua Vercel AI Gateway
     const result = await generateText({
-      model: 'google/gemini-2.5-flash-image-preview',
+      model: 'google/gemini-2.5-flash-image-preview', // Model tối ưu cho xử lý ảnh
       providerOptions: {
-        google: { responseModalities: ['TEXT', 'IMAGE'] },
+        google: { responseModalities: ['TEXT', 'IMAGE'] }, // Yêu cầu trả về ảnh
       },
       messages: [
         {
@@ -103,12 +104,12 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    // 4. Xử lý kết quả (Không đổi)
-    const generatedImages = result.files.filter((f) =>
+    // 4. Xử lý kết quả trả về
+    const generatedImages = result.files?.filter((f) =>
       f.mediaType?.startsWith('image/'),
     );
 
-    if (generatedImages.length > 0) {
+    if (generatedImages && generatedImages.length > 0) {
       const imageFile = generatedImages[0];
       const imageBase64 = Buffer.from(imageFile.uint8Array).toString('base64');
       const dataUri = `data:${imageFile.mediaType};base64,${imageBase64}`;
@@ -117,19 +118,20 @@ export async function POST(request: NextRequest) {
         imageUrl: dataUri,
       });
     } else {
+      // Nếu AI trả về text (thường là thông báo lỗi từ Prompt)
       return NextResponse.json(
         {
           success: false,
-          error: result.text || 'Lỗi: Hướng ảnh không khớp hoặc AI không thể xử lý.',
+          error: result.text || 'AI không thể tạo ảnh. Vui lòng thử ảnh khác.',
         },
         { status: 400 },
       );
     }
   } catch (error) {
-    console.error('[VIRTUAL_TRY_ON_GATEWAY_ERROR]', error);
+    console.error('[VIRTUAL_TRY_ON_API_ERROR]', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: `Lỗi máy chủ nội bộ: ${errorMessage}` },
+      { success: false, error: `Lỗi xử lý: ${errorMessage}` },
       { status: 500 },
     );
   }

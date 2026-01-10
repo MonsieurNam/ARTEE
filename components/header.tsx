@@ -4,13 +4,23 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Menu, X } from "lucide-react"
+import { ShoppingCart, Menu, X, FileText } from "lucide-react" // Import thêm FileText nếu muốn đổi icon, hoặc giữ ShoppingCart
 import { useCart } from "@/hooks/use-cart"
+import { useAuth } from "@/components/providers/auth-provider";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LogOut, User as UserIcon } from "lucide-react";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { cartCount } = useCart()
+  const { user, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,17 +52,14 @@ export default function Header() {
 
       <div className="max-w-7xl mx-auto px-6 lg:px-10">
         <div className="flex items-center justify-between h-15 lg:h-16">
-          {/* Premium Logo with sophisticated hover */}
+          {/* Logo Section */}
           <Link 
             href="/" 
             className="flex items-center gap-4 group relative z-10" 
             onClick={() => setIsOpen(false)}
           >
             <div className="relative w-16 h-16 lg:w-25 lg:h-15">
-              {/* Animated glow ring */}
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-amber-400/40 via-orange-500/40 to-amber-600/40 opacity-0 group-hover:opacity-100 blur-xl transition-all duration-500 group-hover:scale-110" />
-              
-              {/* Logo container */}
               <div className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.12)] group-hover:shadow-[0_8px_32px_rgba(0,0,0,0.16)] transition-all duration-500 group-hover:scale-105 ring-1 ring-gray-200/50 group-hover:ring-amber-400/30">
                 <Image
                   src={encodeURI("/logo chính@4x.png")}
@@ -61,13 +68,12 @@ export default function Header() {
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
                   priority
                 />
-                {/* Overlay gradient on hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </div>
             </div>
           </Link>
 
-          {/* Elevated Desktop Navigation */}
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-2 lg:gap-3">
             {navItems.map((item) => (
               <Link
@@ -75,37 +81,59 @@ export default function Header() {
                 href={item.href}
                 className="relative px-5 lg:px-6 py-2.5 text-[15px] lg:text-base font-medium text-gray-700 hover:text-gray-900 transition-all duration-500 group"
               >
-                {/* Hover background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-500" />
-                
-                {/* Text */}
                 <span className="relative z-10 tracking-wide group-hover:tracking-wider transition-all duration-300">
                   {item.label}
                 </span>
-                
-                {/* Animated underline */}
                 <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600 group-hover:w-4/5 transition-all duration-500 rounded-full" />
-                
-                {/* Subtle dot indicator */}
-                <div className="absolute top-1 right-2 w-1 h-1 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </Link>
             ))}
           </nav>
 
-          {/* Premium Cart & Menu Actions */}
+          {/* Actions Section */}
           <div className="flex items-center gap-3 lg:gap-4">
-            {/* Luxury Cart Button */}
+
+            {/* --- THÊM PHẦN USER Ở ĐÂY --- */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="cursor-pointer h-10 w-10 border border-gray-200">
+                    <AvatarImage src={user.photoURL || ""} />
+                    <AvatarFallback>{user.displayName?.charAt(0) || "U"}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <Link href="/profile">
+                    <DropdownMenuItem className="gap-2 cursor-pointer">
+                      <UserIcon className="w-4 h-4" /> Hồ sơ của tôi
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuItem onClick={logout} className="gap-2 text-red-600 cursor-pointer">
+                    <LogOut className="w-4 h-4" /> Đăng xuất
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/login">
+                <Button variant="ghost" className="font-medium">Đăng nhập</Button>
+              </Link>
+            )}
+
+            {/* THAY ĐỔI Ở ĐÂY: Nút Báo giá */}
             <Link href="/cart" className="group">
               <Button 
                 variant="outline" 
                 className="relative gap-2.5 h-11 px-5 bg-white/60 hover:bg-white border border-gray-200/80 hover:border-gray-300 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all duration-500 rounded-xl backdrop-blur-sm"
               >
+                {/* Giữ icon ShoppingCart hoặc đổi sang FileText nếu muốn biểu tượng giống đơn hàng hơn */}
                 <ShoppingCart className="w-[18px] h-[18px] text-gray-600 group-hover:text-gray-900 transition-colors duration-300" />
+                
+                {/* Đổi text từ "Giỏ hàng" thành "Báo giá" */}
                 <span className="hidden sm:inline text-[15px] text-gray-700 group-hover:text-gray-900 font-medium tracking-wide">
-                  Giỏ hàng
+                  Báo giá
                 </span>
                 
-                {/* Premium badge */}
+                {/* Badge đếm số lượng */}
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-[0_4px_12px_rgba(239,68,68,0.4)] ring-2 ring-white animate-in zoom-in duration-300">
                     {cartCount > 99 ? '99+' : cartCount}
@@ -114,7 +142,7 @@ export default function Header() {
               </Button>
             </Link>
             
-            {/* Elegant Mobile Menu Toggle */}
+            {/* Mobile Menu Toggle */}
             <Button 
               variant="ghost" 
               size="sm" 
@@ -137,7 +165,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Refined Mobile Navigation */}
+        {/* Mobile Navigation */}
         <div 
           className={`md:hidden overflow-hidden transition-all duration-500 ${
             isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
@@ -155,9 +183,7 @@ export default function Header() {
                   animation: isOpen ? 'slideInLeft 0.5s ease-out forwards' : 'none'
                 }}
               >
-                {/* Slide-in border */}
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0 h-8 bg-gradient-to-r from-amber-500 to-orange-500 rounded-r-full group-hover:w-1 transition-all duration-300" />
-                
                 <span className="flex items-center gap-3 pl-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-gray-400 group-hover:bg-amber-500 group-hover:scale-150 transition-all duration-300" />
                   <span className="tracking-wide">{item.label}</span>
@@ -168,7 +194,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Elegant bottom border with animated glow */}
       <div className={`absolute bottom-0 left-0 right-0 h-[1px] transition-opacity duration-700 ${
         scrolled ? "opacity-100" : "opacity-0"
       }`}>
@@ -178,14 +203,8 @@ export default function Header() {
 
       <style jsx>{`
         @keyframes slideInLeft {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
         }
       `}</style>
     </header>

@@ -5,43 +5,42 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { X, Upload, Loader2, Download, Camera } from "lucide-react"
+import { X, Upload, Loader2, Download } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 
-// --- THÊM HÀM MỚI ĐỂ RESIZE ẢNH ---
-/**
- * Nén và thay đổi kích thước ảnh từ Data URI.
- * @param dataUri Chuỗi Base64 của ảnh.
- * @param maxWidth Chiều rộng tối đa.
- * @param quality Chất lượng JPEG (0.0 - 1.0).
- * @returns Một Promise trả về Data URI mới đã được nén.
- */
-async function resizeImage(dataUri: string, maxWidth: number, quality: number = 0.8): Promise<string> {
+async function resizeImage(dataUri: string, targetSize: number = 1024, quality: number = 0.9): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
-      // Chỉ resize nếu ảnh lớn hơn
-      if (img.width <= maxWidth) {
-        return resolve(dataUri);
-      }
-
+      // 1. Tạo Canvas hình vuông cố định (ví dụ 1024x1024)
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      canvas.width = targetSize;
+      canvas.height = targetSize;
       
+      const ctx = canvas.getContext('2d');
       if (!ctx) {
-        return reject(new Error('Không thể lấy canvas context'));
+        return reject(new Error('Không thể tạo context canvas'));
       }
 
-      const scale = maxWidth / img.width;
-      const newWidth = img.width * scale;
-      const newHeight = img.height * scale;
+      // 2. Tô toàn bộ nền màu trắng (hoặc màu xám nhạt #F5F5F5 nếu muốn)
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, targetSize, targetSize);
 
-      canvas.width = newWidth;
-      canvas.height = newHeight;
-      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+      // 3. Tính toán tỷ lệ để ảnh nằm trọn trong khung vuông (Object Contain)
+      const scale = Math.min(targetSize / img.width, targetSize / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+      
+      // 4. Tính tọa độ để căn giữa ảnh
+      const x = (targetSize - w) / 2;
+      const y = (targetSize - h) / 2;
 
-      // Chuyển sang JPEG với chất lượng 80% để giảm mạnh kích thước
+      // 5. Vẽ ảnh vào giữa
+      ctx.drawImage(img, x, y, w, h);
+
+      // 6. Xuất ra ảnh JPEG vuông
       const resizedDataUri = canvas.toDataURL('image/jpeg', quality);
       resolve(resizedDataUri); 
     };
@@ -49,51 +48,35 @@ async function resizeImage(dataUri: string, maxWidth: number, quality: number = 
     img.src = dataUri;
   });
 }
-// --- KẾT THÚC HÀM RESIZE MỚI ---
 
-interface VirtualTryOnModalProps {
-  isOpen: boolean
-  onClose: () => void
-  shirtImageUrl: string | null // Đây có thể là URL (vd: /ao.png) hoặc Data URI
-  productPose: 'front' | 'back'
-}
-
-// --- THÊM MỚI HÀM HELPER ---
 /**
- * Đảm bảo một nguồn ảnh (URL hoặc Data URI) được trả về dưới dạng Data URI.
- * Nếu là URL, nó sẽ fetch và chuyển đổi.
+ * Helper: Đảm bảo input là Data URI (chuyển đổi nếu là URL thường)
  */
 async function ensureDataUri(imageSrc: string): Promise<string> {
-  if (imageSrc.startsWith('data:image')) {
-    // Nó đã là một Data URI, trả về ngay
-    return imageSrc;
-  }
+  if (imageSrc.startsWith('data:image')) return imageSrc;
 
-  // Nó là một URL (ví dụ: /hoodie_truoc.png), chúng ta cần fetch
   try {
-    // Fetch hình ảnh từ URL (hoạt động cho cả URL tương đối)
     const response = await fetch(imageSrc);
-    if (!response.ok) {
-      throw new Error(`Lỗi khi tải ảnh áo mẫu: ${response.statusText}`);
-    }
+    if (!response.ok) throw new Error('Network response was not ok');
     const blob = await response.blob();
-    
-    // Chuyển Blob thành Data URI
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
+      reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
   } catch (error) {
-    console.error("Lỗi chuyển đổi URL sang Data URI:", error);
-    throw new Error("Không thể tải ảnh áo mẫu.");
+    console.error("Lỗi tải ảnh áo:", error);
+    throw new Error("Không thể tải ảnh mẫu áo.");
   }
 }
-// --- KẾT THÚC HÀM HELPER ---
 
+interface VirtualTryOnModalProps {
+  isOpen: boolean
+  onClose: () => void
+  shirtImageUrl: string | null 
+  productPose: 'front' | 'back'
+}
 
 export default function VirtualTryOnModal({
   isOpen,
@@ -107,27 +90,27 @@ export default function VirtualTryOnModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
-  // Reset state khi modal được mở
   useEffect(() => {
     if (isOpen) {
         setUserImage(null);
         setResultImage(null);
         setIsGenerating(false);
     }
-  }, [isOpen, shirtImageUrl]);
+  }, [isOpen]); // Bỏ shirtImageUrl khỏi deps để tránh reset không mong muốn
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.size > 2 * 1024 * 1024) { // <-- Giảm xuống 2MB
-      toast({ title: "Lỗi", description: "Kích thước ảnh không được vượt quá 2MB", variant: "destructive" })
+    // Giới hạn file input đầu vào 5MB
+    if (file.size > 5 * 1024 * 1024) { 
+      toast({ title: "Lỗi", description: "Ảnh quá lớn (Max 5MB)", variant: "destructive" })
       return
     }
 
     const reader = new FileReader()
     reader.onload = (event) => {
-      setUserImage(event.target?.result as string) // userImage luôn là Data URI
+      setUserImage(event.target?.result as string)
       setResultImage(null)
     }
     reader.readAsDataURL(file)
@@ -135,7 +118,7 @@ export default function VirtualTryOnModal({
 
   const handleGenerate = async () => {
     if (!userImage || !shirtImageUrl) {
-      toast({ title: "Lỗi", description: "Vui lòng tải lên ảnh của bạn và đảm bảo ảnh áo đã sẵn sàng.", variant: "destructive" })
+      toast({ title: "Thiếu thông tin", description: "Vui lòng tải ảnh của bạn.", variant: "destructive" })
       return
     }
 
@@ -143,41 +126,37 @@ export default function VirtualTryOnModal({
     setResultImage(null)
 
     try {
-      // --- CẬP NHẬT LOGIC ---
-      // 1. Đảm bảo CẢ HAI ảnh đều là Data URI
-      const userImageDataUri = userImage; // Đã là Data URI
-      const shirtImageDataUri = await ensureDataUri(shirtImageUrl); // Chuyển đổi nếu cần
+      // 1. Chuẩn hóa dữ liệu ảnh
+      const userImageDataUri = userImage;
+      const shirtImageDataUri = await ensureDataUri(shirtImageUrl);
 
-      const resizedUserImage = await resizeImage(userImageDataUri, 800);
-      // Nén ảnh mockup (áo + thiết kế) xuống tối đa 800px chiều rộng
-      const resizedMockupImage = await resizeImage(shirtImageDataUri, 800);
+      // 2. Resize ảnh về kích thước an toàn cho AI (Max 1024px)
+      // Kích thước này đủ nét nhưng không quá lớn khiến AI bị lỗi hoặc crop
+      const resizedUserImage = await resizeImage(userImageDataUri, 1024);
+      const resizedMockupImage = await resizeImage(shirtImageDataUri, 1024);
 
-      // 2. Gửi CẢ HAI Data URI đến server
+      // 3. Gửi API
       const response = await fetch("/api/virtual-try-on", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userImage: resizedUserImage,     // (ví dụ: data:image/png;base64,...)
-          mockupImage: resizedMockupImage, // (ví dụ: data:image/png;base64,...)
+          userImage: resizedUserImage,
+          mockupImage: resizedMockupImage,
           productPose: productPose,
         }),
       });
-      // --- KẾT THÚC CẬP NHẬT ---
 
       const data = await response.json();
 
       if (!response.ok || data.success === false) {
-        // Lỗi này giờ sẽ là lỗi thực sự từ server
-        // (vd: lỗi xác thực pose, hoặc lỗi của Gemini)
         throw new Error(data.error || "Quá trình tạo ảnh thất bại");
       }
 
-      // 4. Nếu thành công
       setResultImage(data.imageUrl);
-      toast({ title: "Thành công", description: "Hình ảnh thử đồ ảo đã được tạo." })
+      toast({ title: "Thành công", description: "Đã tạo ảnh thử đồ!" })
 
     } catch (error) {
-      console.error("Lỗi khi tạo ảnh thử đồ ảo:", error);
+      console.error("VTO Error:", error);
       toast({ 
         title: "Lỗi", 
         description: error instanceof Error ? error.message : "Đã có lỗi xảy ra.", 
@@ -191,68 +170,104 @@ export default function VirtualTryOnModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-card">
-          <h2 className="text-2xl font-bold text-foreground">Thử đồ ảo (VTO)</h2>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-900 border-none shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white dark:bg-neutral-900 z-10">
+          <div>
+            <h2 className="text-2xl font-bold">Phòng Thử Đồ Ảo (AI)</h2>
+            <p className="text-sm text-muted-foreground">Mặc thử sản phẩm lên ảnh của bạn</p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-neutral-100">
+            <X className="w-6 h-6" />
           </Button>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="text-center p-3 bg-secondary/50 rounded-lg">
-            <p className="font-semibold text-foreground">
-              Áo mẫu: <span className="text-primary capitalize">{productPose === 'front' ? 'Mặt trước' : 'Mặt sau'}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Vui lòng tải ảnh chụp {productPose === 'front' ? 'chính diện' : 'sau lưng'} của bạn để tiếp tục.
-            </p>
-          </div>
+        <div className="p-6 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            {/* CỘT TRÁI: Input */}
+            <div className="space-y-6">
+                {/* 1. Áo mẫu */}
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">1. Sản phẩm đang chọn</label>
+                    <div className="aspect-[3/4] w-full bg-neutral-100 rounded-xl overflow-hidden border border-neutral-200 flex items-center justify-center relative">
+                        {shirtImageUrl ? (
+                            <img src={shirtImageUrl} alt="Áo mẫu" className="w-full h-full object-contain" />
+                        ) : (
+                            <span className="text-muted-foreground">Đang tải ảnh áo...</span>
+                        )}
+                        <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                            {productPose === 'front' ? 'Mặt trước' : 'Mặt sau'}
+                        </div>
+                    </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground">1. Áo mẫu</label>
-              <div className="aspect-square w-full bg-muted rounded-lg flex items-center justify-center">
-                {shirtImageUrl ? <img src={shirtImageUrl} alt="Áo mẫu" className="w-full h-full object-contain rounded-lg"/> : <p className="text-xs text-muted-foreground">Không có ảnh áo</p>}
-              </div>
-            </div>
+                {/* 2. Ảnh người dùng */}
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">2. Ảnh của bạn</label>
+                    <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="group relative aspect-[3/4] w-full bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer flex flex-col items-center justify-center text-center overflow-hidden"
+                    >
+                        {userImage ? (
+                            <>
+                                <img src={userImage} alt="User" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-white font-medium flex items-center gap-2"><Upload className="w-4 h-4"/> Đổi ảnh khác</span>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="p-6">
+                                <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mx-auto mb-3 text-primary">
+                                    <Upload className="w-6 h-6" />
+                                </div>
+                                <p className="font-medium text-foreground">Tải ảnh lên</p>
+                                <p className="text-xs text-muted-foreground mt-1">Nên dùng ảnh toàn thân hoặc bán thân rõ nét</p>
+                            </div>
+                        )}
+                    </div>
+                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground">2. Ảnh của bạn ({productPose === 'front' ? 'Mặt trước' : 'Mặt sau'})</label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square w-full border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors flex flex-col items-center justify-center"
-              >
-                {userImage ? (
-                  <img src={userImage} alt="Ảnh người dùng" className="w-full h-full object-contain rounded-lg"/>
-                ) : (
-                  <div className="space-y-2">
-                    <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Tải ảnh chân dung</p>
-                    <p className="text-xs text-muted-foreground">(Từ ngực trở lên)</p>
-                  </div>
-                )}
-              </div>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </div>
-          </div>
-          
-          <Button onClick={handleGenerate} disabled={!userImage || !shirtImageUrl || isGenerating} className="w-full py-6 text-base gap-2">
-            {isGenerating ? <><Loader2 className="w-4 h-4 animate-spin" /> Đang xử lý...</> : "Ghép ảnh thử đồ"}
-          </Button>
-
-          {resultImage && (
-            <div className="space-y-3 pt-4 border-t border-border">
-              <h3 className="font-semibold text-foreground">Kết quả</h3>
-              <img src={resultImage} alt="Kết quả thử đồ" className="w-full rounded-lg border border-border"/>
-              <a href={resultImage} download={`artee-try-on-${Date.now()}.png`}>
-                <Button variant="outline" className="w-full gap-2 bg-transparent">
-                  <Download className="w-4 h-4" /> Tải xuống hình ảnh
+                <Button 
+                    onClick={handleGenerate} 
+                    disabled={!userImage || !shirtImageUrl || isGenerating} 
+                    className="w-full py-6 text-lg font-bold shadow-lg shadow-primary/20"
+                >
+                    {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Đang xử lý...</> : "✨ Mặc thử ngay"}
                 </Button>
-              </a>
             </div>
-           )}
+
+            {/* CỘT PHẢI: Kết quả */}
+            <div className="space-y-2 lg:border-l lg:pl-8 border-neutral-200">
+                <label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Kết quả AI</label>
+                <div className="aspect-[3/4] w-full bg-neutral-900 rounded-xl overflow-hidden flex items-center justify-center relative shadow-inner">
+                    {isGenerating ? (
+                        <div className="text-center text-white/80">
+                            <Loader2 className="w-10 h-10 animate-spin mx-auto mb-4 text-primary" />
+                            <p>AI đang may đo cho bạn...</p>
+                            <p className="text-xs text-white/50 mt-2">(Mất khoảng 10-15 giây)</p>
+                        </div>
+                    ) : resultImage ? (
+                        <img src={resultImage} alt="Kết quả" className="w-full h-full object-contain" />
+                    ) : (
+                        <div className="text-center text-white/30 p-8">
+                            <p>Kết quả sẽ hiện ở đây</p>
+                        </div>
+                    )}
+                </div>
+
+                {resultImage && (
+                    <a href={resultImage} download={`artee-tryon-${Date.now()}.jpg`} className="block mt-4">
+                        <Button variant="outline" className="w-full gap-2">
+                            <Download className="w-4 h-4" /> Tải ảnh về máy
+                        </Button>
+                    </a>
+                )}
+            </div>
+
+          </div>
         </div>
       </Card>
     </div>
