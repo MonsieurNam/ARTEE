@@ -58,13 +58,26 @@ export default function CartPage() {
 
         {/* --- PHẦN MỚI: THÔNG BÁO QUY TRÌNH (ALERT) --- */}
         {cart && cart.length > 0 && (
-            <Alert className="mb-8 bg-blue-50 border-blue-200 text-blue-900">
+            <Alert className="mb-8 bg-blue-50/80 border-blue-200 text-blue-900 shadow-sm">
+                {/* Icon khiên bảo vệ tạo cảm giác an toàn */}
                 <ShieldCheck className="h-5 w-5 stroke-blue-600" />
-                <AlertTitle className="font-bold text-blue-800 ml-2">Quy trình Pre-order Đảm bảo</AlertTitle>
-                <AlertDescription className="ml-2 mt-1 text-blue-700 text-sm leading-relaxed">
-                    Sản phẩm tại ARTEE được may đo và tích hợp công nghệ AR riêng biệt. 
-                    Bạn chỉ cần <strong>đặt cọc 50.000đ</strong> để xác nhận đơn hàng. 
-                    Phần còn lại sẽ thanh toán khi nhận hàng (COD).
+                
+                <AlertTitle className="font-bold text-blue-800 ml-2 text-base">
+                    Thông tin thanh toán Pre-order
+                </AlertTitle>
+                
+                <AlertDescription className="ml-2 mt-2 text-blue-800 text-sm leading-relaxed">
+                    <ul className="list-disc list-inside space-y-1">
+                        <li>
+                            Sản phẩm được <strong>may đo & in ấn riêng</strong> cho bạn.
+                        </li>
+                        <li>
+                            Chỉ cần <strong>cọc 50.000đ</strong> để xác nhận sản xuất.
+                        </li>
+                        <li>
+                            Số tiền còn lại thanh toán khi nhận hàng (COD).
+                        </li>
+                    </ul>
                 </AlertDescription>
             </Alert>
         )}

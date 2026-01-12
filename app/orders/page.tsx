@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Loader2, Package, Calendar, Clock, AlertCircle } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider" // 1. Import Auth Hook
-import { getUserOrders, type FirestoreOrder } from "@/lib/services/order-service" // 2. Import Service vừa tạo
+import { getUserOrders, type FirestoreOrder } from "@/lib/services/order-service" 
+import { DEPOSIT_AMOUNT } from "@/lib/constants" 
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price)
@@ -132,7 +133,9 @@ export default function OrdersPage() {
           <div className="space-y-6">
             {orders.map((order) => {
               const statusInfo = getStatusBadge(order.status);
-              
+              const deposit = order.totalAmount < DEPOSIT_AMOUNT ? order.totalAmount : DEPOSIT_AMOUNT;
+              const remainingCOD = order.totalAmount - deposit;
+
               return (
                 <Card key={order.id} className="overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   {/* Header Card */}
@@ -186,12 +189,29 @@ export default function OrdersPage() {
                     ))}
                   </div>
 
-                  {/* Footer Card: Tổng tiền */}
-                  <div className="p-4 bg-gray-50 flex justify-end items-center gap-3 border-t border-gray-100">
-                    <span className="text-sm text-gray-600">Thành tiền:</span>
-                    <span className="text-lg font-bold text-primary">
-                      {formatPrice(order.totalAmount)}
-                    </span>
+                  <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col gap-2">
+                    {/* Dòng 1: Tổng giá trị */}
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                        <span>Tổng giá trị đơn hàng:</span>
+                        <span className="line-through decoration-gray-300">{formatPrice(order.totalAmount)}</span>
+                    </div>
+
+                    {/* Dòng 2: Đã cọc */}
+                    <div className="flex justify-between items-center text-sm font-medium text-blue-600">
+                        <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span> 
+                            Đã cọc (Pre-order):
+                        </span>
+                        <span>-{formatPrice(deposit)}</span>
+                    </div>
+
+                    {/* Dòng 3: Cần thanh toán COD (Quan trọng nhất) */}
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-1">
+                        <span className="font-bold text-gray-900">Thanh toán khi nhận (COD):</span>
+                        <span className="text-xl font-bold text-red-600">
+                            {formatPrice(remainingCOD)}
+                        </span>
+                    </div>
                   </div>
                 </Card>
               );

@@ -4,6 +4,9 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+// Thêm dòng này vào các import
+import { useAuth } from "@/components/providers/auth-provider"
+import { LogIn } from "lucide-react" // Import thêm icon
 import {
   ShoppingCart,
   Zap,
@@ -61,8 +64,24 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const fabricPrice = selectedFabric?.price || 0
   const sizePrice = selectedSize?.price || 0
   const unitPrice = product.price + fabricPrice + sizePrice
+  const { user } = useAuth() 
 
   const handleAddToCart = () => {
+    if (!user) {
+      toast({
+        title: "Yêu cầu đăng nhập",
+        description: "Bạn cần đăng nhập để hệ thống ghi nhận đơn Pre-order và bảo hành.",
+        variant: "destructive", // Màu đỏ để gây chú ý
+        action: (
+          <ToastAction altText="Đăng nhập ngay" onClick={() => router.push("/login")}>
+            <div className="flex items-center gap-2">
+                <LogIn className="w-4 h-4" /> Đăng nhập
+            </div>
+          </ToastAction>
+        ),
+      })
+      return; // Dừng lại, không cho thêm vào giỏ
+    }
     try {
       addToCart({
         type: "predesigned" as const,
@@ -323,20 +342,26 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           <div>
             <Button
               onClick={handleAddToCart}
-              className="w-full gap-3 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white py-7 text-lg font-bold shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-[1.02] rounded-xl"
+              // Đổi màu style sang tông xanh đậm tin cậy hơn
+              className="w-full gap-3 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white py-7 text-lg font-bold shadow-xl shadow-blue-900/20 transition-all duration-300 hover:scale-[1.02] rounded-xl"
             >
               <ShoppingCart className="w-6 h-6" />
-              Thêm vào danh sách báo giá
+              Đăng Ký Pre-order (Cọc 50k)
             </Button>
             
-            {/* Dòng Disclaimer quan trọng */}
-            <div className="flex items-center justify-center gap-2 mt-3 p-2 bg-green-50 rounded-lg border border-green-100">
-                <ShieldCheck className="w-4 h-4 text-green-600" />
-                <p className="text-xs font-medium text-green-800">
-                    Pre-order: Cọc 50k để sản xuất • Trả hàng 3-5 ngày
+            {/* Thêm đoạn Disclaimer (Cam kết) mới ngay bên dưới nút */}
+            <div className="flex flex-col gap-1 mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                <div className="flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs font-bold text-blue-800 uppercase">Cam kết chất lượng</p>
+                </div>
+                <p className="text-xs text-center text-blue-600/80 leading-relaxed">
+                    Chúng tôi sẽ liên hệ Zalo để chốt size và mẫu in trước khi sản xuất. <br/>
+                    Bạn chỉ cần <strong>cọc 50k</strong>, phần còn lại thanh toán khi nhận hàng.
                 </p>
             </div>
           </div>
+          {/* --- KẾT THÚC PHẦN SỬA --- */}
 
           <Button
             onClick={() => setIsVtoModalOpen(true)}

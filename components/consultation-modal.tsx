@@ -43,66 +43,76 @@ export default function ConsultationModal() {
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       {/* 
-         LƯU Ý QUAN TRỌNG: 
-         Thêm prop showCloseButton={false} để tắt nút X mặc định bị chồng 
+         LƯU Ý: showCloseButton={false} để tắt nút X mặc định của thư viện
+         để ta dùng nút X custom đẹp hơn bên dưới 
       */}
       <DialogContent 
         className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl bg-white" 
         showCloseButton={false} 
       >
         <div className="flex flex-col md:flex-row">
-            {/* Cột trái: Ảnh nhân viên (Hoặc ảnh branding) */}
-            <div className="md:w-2/5 bg-gradient-to-br from-blue-600 to-purple-700 p-6 flex flex-col justify-center items-center text-center text-white relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+            {/* Cột trái: Branding & Trust */}
+            <div className="md:w-2/5 bg-gradient-to-br from-blue-700 to-blue-900 p-6 flex flex-col justify-center items-center text-center text-white relative overflow-hidden">
+                {/* Background noise effect */}
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
                 
-                <div className="relative z-10 w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg">
-                    <MessageCircle className="w-8 h-8 text-blue-600" />
+                <div className="relative z-10 w-14 h-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/20">
+                    <MessageCircle className="w-7 h-7 text-white" />
                 </div>
                 <h3 className="relative z-10 font-bold text-lg leading-tight">ARTEE Support</h3>
-                <p className="relative z-10 text-xs text-blue-100 mt-2">Luôn sẵn sàng 24/7</p>
+                <p className="relative z-10 text-xs text-blue-200 mt-2">Hỗ trợ trực tiếp 1:1</p>
             </div>
 
-            {/* Cột phải: Nội dung */}
+            {/* Cột phải: Nội dung Action */}
             <div className="md:w-3/5 p-6 relative">
-                {/* Nút X tự làm (Custom Close Button) */}
+                {/* Nút X tự làm */}
                 <button 
                     onClick={handleClose}
-                    className="absolute top-4 right-4 p-1 rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                    className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 transition-colors z-20"
                 >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                 </button>
 
-                <DialogHeader>
-                    <DialogTitle className="text-xl font-bold text-gray-900 pr-4">
-                        Bạn cần tư vấn thiết kế riêng?
-                    </DialogTitle>
-                </DialogHeader>
-                
-                <div className="mt-3 space-y-4">
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                        Đội ngũ kỹ thuật của ARTEE đang online. Chúng tôi có thể giúp bạn:
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-2 list-disc pl-4">
-                        <li>Lên mockup 3D miễn phí.</li>
-                        <li>Tư vấn chọn vải phù hợp.</li>
-                        <li>Báo giá sỉ cho Team/Công ty.</li>
-                    </ul>
-
-                    <div className="pt-2">
-                        <Button 
-                            onClick={handleContact}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-5 shadow-lg shadow-blue-200"
-                        >
-                            Chat Zalo Ngay
-                        </Button>
-                        <p className="text-xs text-center text-gray-400 mt-3">
-                            Phản hồi trung bình: &lt; 5 phút
+                <div className="mt-1">
+                    <h2 className="text-lg font-bold text-gray-900 leading-snug">
+                        Bạn muốn xem ảnh thực tế chất vải?
+                    </h2>
+                    
+                    <div className="mt-4 space-y-3">
+                        <p className="text-sm text-gray-600">
+                            Chat ngay với nhân viên ARTEE để:
                         </p>
+                        <ul className="text-xs text-gray-700 space-y-2">
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Xem video/ảnh thật cận cảnh chất vải.
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Tư vấn size chuẩn theo chiều cao/cân nặng.
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                Hướng dẫn quy trình <b>cọc 50k</b> an toàn.
+                            </li>
+                        </ul>
+
+                        <div className="pt-3">
+                            <Button 
+                                onClick={handleContact}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 shadow-lg shadow-blue-200 text-sm transition-transform active:scale-95"
+                            >
+                                Chat Zalo Xem Ảnh Thật
+                            </Button>
+                            <p className="text-[10px] text-center text-gray-400 mt-2">
+                                *Không mua không sao, chúng tôi sẵn sàng tư vấn.
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
+                  </div>
+              </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }

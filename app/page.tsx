@@ -6,7 +6,6 @@ import CollectionSection from "@/components/collection-section"
 import HowItWorksSection from "@/components/how-it-works-section"
 import FinalCtaSection from "@/components/final-cta-section"
 import Link from "next/link"
-import ContactSection from "@/components/ContactSection"
 import TechShowcaseSection from "@/components/tech-showcase-section" // 1. IMPORT
 
 export default function Home() {
@@ -17,8 +16,6 @@ export default function Home() {
       <TechShowcaseSection /> 
       <BrandStorySection />
       <CollectionSection />
-      {/* <HowItWorksSection /> */}
-      <ContactSection />
       <FinalCtaSection />
     </main>
   )

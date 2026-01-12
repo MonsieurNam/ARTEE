@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { clearCart } from "@/lib/cart";
 
 interface AuthContextType {
   user: User | null;
@@ -57,6 +58,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const logout = async () => {
     try {
       await signOut(auth);
+      clearCart();
       toast({ title: "Đã đăng xuất" });
     } catch (error) {
       console.error("Logout Error:", error);

@@ -123,20 +123,16 @@ export default function HeroSection() {
                 </span>
             </button>
 
-            {/* Nút 2: Xem mẫu có sẵn (Scroll xuống dưới) */}
-            <button
-              onClick={() => {
-                // Scroll xuống phần Tech Showcase vừa tạo ở Bước 2.1
-                const showcaseSection = document.querySelector("section:nth-of-type(2)"); 
-                showcaseSection?.scrollIntoView({ behavior: "smooth" })
-              }}
-              className="w-full sm:w-auto px-8 py-4 text-base font-medium tracking-wide rounded-full border border-white/30 text-white backdrop-blur-sm bg-white/5 hover:bg-white/10 hover:border-white/60 transition-all duration-300"
-            >
-              <span className="flex items-center justify-center gap-2">
-                Xem công nghệ in ấn
-              </span>
-            </button>
-          </div>
+            <Link href="/contact">
+                <button
+                  className="group w-full sm:w-auto px-8 py-4 text-base font-medium tracking-wide rounded-full border border-white/30 text-white backdrop-blur-sm bg-white/5 hover:bg-white/10 hover:border-white/60 transition-all duration-300"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4 group-hover:text-blue-300 transition-colors" /> 
+                    Tư vấn & Bảo hành
+                  </span>
+                </button>
+            </Link>
           
           <p className="mt-4 text-xs text-white/50 italic">
             *Cam kết hoàn tiền cọc nếu không hài lòng với bản in thử.
@@ -178,6 +174,7 @@ export default function HeroSection() {
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full animate-scroll-down" />
           </div>
         </div>
+      </div>
       </div>
 
       <style jsx>{`

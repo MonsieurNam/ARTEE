@@ -11,7 +11,7 @@ export const BRAND_STORY = {
   description: "ARTEE là nền tảng thiết kế áo in theo yêu cầu kết hợp công nghệ AR, tính bền vững và sáng tạo cá nhân.",
   pillars: [
     {
-      title: "Nghệ Thuật Độc Đáo",
+      title: "Nghệ Thuật",
       description: "Mỗi thiết kế đều được thiết kế theo cách bạn muốn, mang đậm dấu ấn cá nhân.",
     },
     {

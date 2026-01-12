@@ -80,12 +80,12 @@ export default function FinalCtaSection() {
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
 
       <div className="max-w-4xl mx-auto text-center relative z-10">
-        <h2 className="text-4xl md:text-6xl font-serif font-light mb-6 text-balance tracking-tight">
-            Theo dõi hành trình của ARTEE
+        <h2 className="text-4xl md:text-6xl font-light font-light mb-6 text-balance tracking-tight">
+            Tham gia cộng đồng ARTEE
         </h2>
 
         <p className="text-lg text-neutral-400 mb-12 max-w-2xl mx-auto text-balance leading-relaxed">
-          Tham gia cộng đồng và nhận thông báo về các bộ sưu tập AR mới nhất.
+          Đừng chỉ nghe chúng tôi nói. Hãy xem <strong>video thực tế</strong> và feedback từ khách hàng đã trải nghiệm công nghệ AR trên TikTok & Facebook.
         </p>
 
         {/* Social Links */}
