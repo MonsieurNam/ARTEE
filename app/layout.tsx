@@ -7,6 +7,8 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import AuthProvider from "@/components/providers/auth-provider"; 
+import ConsultationModal from "@/components/consultation-modal";
+import StickyContact from "@/components/sticky-contact";
 
 // THAY ĐỔI: Khởi tạo Inter với subset 'vietnamese' và gán biến CSS
 const inter = Inter({ 
@@ -38,6 +40,8 @@ export default function RootLayout({
         {/* BỌC AUTH PROVIDER Ở ĐÂY */}
         <AuthProvider>
           {children}
+          <ConsultationModal />
+          <StickyContact />
           <Analytics />
           <Toaster />
         </AuthProvider>

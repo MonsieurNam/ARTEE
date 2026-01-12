@@ -4,11 +4,12 @@
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Trash2, Plus, Minus, ArrowLeft, Shirt } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowLeft, Shirt, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "@/hooks/use-cart";
 import OrderSummary from "@/components/order-summary";
 import { PRODUCT_NAMES } from "@/lib/constants";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Hàm format giá tiền
 const formatPrice = (price: number) => {
@@ -25,119 +26,154 @@ export default function CartPage() {
     return (
       <main className="min-h-screen bg-background">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="text-center text-muted-foreground">Đang tải giỏ hàng...</div>
+        <div className="flex h-[80vh] items-center justify-center">
+            <div className="flex flex-col items-center gap-2">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                <p className="text-muted-foreground">Đang tải danh sách...</p>
+            </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-gray-50/50">
       <Header />
 
-      <div className="max-w-7xl mx-auto px-4 py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6 md:py-10">
         {/* Breadcrumb & Title */}
         <div className="flex items-center gap-2 mb-6">
           <Link href="/" className="flex items-center gap-1 text-primary hover:underline text-sm md:text-base">
             <ArrowLeft className="w-4 h-4" />
-            Quay lại
+            Tiếp tục xem mẫu
           </Link>
-          <span className="text-muted-foreground text-sm md:text-base">/</span>
-          <span className="text-foreground font-medium text-sm md:text-base">Giỏ hàng</span>
         </div>
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-8">Giỏ hàng của bạn</h1>
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Danh sách Yêu cầu & Báo giá</h1>
+                <p className="text-muted-foreground mt-1">Kiểm tra lại các mẫu bạn muốn ARTEE thực hiện.</p>
+            </div>
+        </div>
+
+        {/* --- PHẦN MỚI: THÔNG BÁO QUY TRÌNH (ALERT) --- */}
+        {cart && cart.length > 0 && (
+            <Alert className="mb-8 bg-blue-50/80 border-blue-200 text-blue-900 shadow-sm">
+                {/* Icon khiên bảo vệ tạo cảm giác an toàn */}
+                <ShieldCheck className="h-5 w-5 stroke-blue-600" />
+                
+                <AlertTitle className="font-bold text-blue-800 ml-2 text-base">
+                    Thông tin thanh toán Pre-order
+                </AlertTitle>
+                
+                <AlertDescription className="ml-2 mt-2 text-blue-800 text-sm leading-relaxed">
+                    <ul className="list-disc list-inside space-y-1">
+                        <li>
+                            Sản phẩm được <strong>may đo & in ấn riêng</strong> cho bạn.
+                        </li>
+                        <li>
+                            Chỉ cần <strong>cọc 50.000đ</strong> để xác nhận sản xuất.
+                        </li>
+                        <li>
+                            Số tiền còn lại thanh toán khi nhận hàng (COD).
+                        </li>
+                    </ul>
+                </AlertDescription>
+            </Alert>
+        )}
 
         {!cart || cart.length === 0 ? (
-          <Card className="p-8 md:p-12 text-center">
-            <p className="text-base md:text-lg text-muted-foreground mb-4">Giỏ hàng của bạn đang trống</p>
+          <Card className="p-12 text-center border-dashed border-2 bg-white/50">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Shirt className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Danh sách trống</h3>
+            <p className="text-muted-foreground mb-6">Bạn chưa chọn mẫu nào để báo giá.</p>
             <Link href="/customizer">
-              <Button className="gap-2">Bắt đầu thiết kế</Button>
+              <Button size="lg" className="shadow-lg shadow-primary/20">Bắt đầu thiết kế ngay</Button>
             </Link>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Cart Items List */}
             <div className="lg:col-span-2 space-y-4">
               {cart.map((item) => (
-                <Card key={item.id} className="p-4 md:p-6 border border-border">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    
-                    {/* Product Preview Image */}
-                    <div className="w-full sm:w-28 h-28 rounded-lg flex items-center justify-center flex-shrink-0 bg-gray-100 border p-1">
+                <Card key={item.id} className="p-4 bg-white shadow-sm hover:shadow-md transition-shadow border-gray-100">
+                  <div className="flex gap-4">
+                    {/* Ảnh sản phẩm */}
+                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-gray-50 border flex-shrink-0 overflow-hidden relative group">
                       {item.type === 'custom' && item.previewImage ? (
                         <img 
                             src={item.previewImage} 
-                            alt="Thiết kế tùy chỉnh" 
-                            className="w-full h-full object-contain rounded-md" 
+                            alt="Custom Design" 
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform" 
                         />
                       ) : (
-                        // Placeholder cho sản phẩm có sẵn hoặc khi không có ảnh preview
                         <div 
-                            className="w-full h-full rounded-md flex items-center justify-center" 
+                            className="w-full h-full flex items-center justify-center transition-colors" 
                             style={{ backgroundColor: item.product.color || '#f0f0f0' }}
                         >
-                            <Shirt className="w-10 h-10 text-gray-400"/>
+                            <Shirt className="w-10 h-10 text-gray-300"/>
                         </div>
                       )}
                     </div>
 
-                    {/* Product Details & Actions */}
-                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    {/* Thông tin chi tiết */}
+                    <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
-                        <h3 className="font-semibold text-foreground text-sm md:text-base leading-tight">
-                          {item.type === 'custom'
-                            ? `Áo ${PRODUCT_NAMES[item.product.type || 'tee'] || 'tự'} thiết kế`
-                            : item.product.productName || 'Sản phẩm có sẵn'}
-                        </h3>
-
-                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                          {item.type === 'custom'
-                            ? `Kích cỡ: ${item.product.size}`
-                            : `Vải: ${item.product.fabric} | Kích cỡ: ${item.product.size}`}
-                        </p>
-                        
-                        <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                          Đơn giá: {formatPrice(item.price)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3">
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                           <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="h-8 w-8 p-0"
-                              aria-label="Giảm số lượng"
+                        <div className="flex justify-between items-start gap-2">
+                            <h3 className="font-bold text-gray-900 text-base md:text-lg line-clamp-2">
+                            {item.type === 'custom'
+                                ? `Thiết kế: Áo ${PRODUCT_NAMES[item.product.type || 'tee'] || 'T-shirt'}`
+                                : item.product.productName}
+                            </h3>
+                            <Button 
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeFromCart(item.id)} 
+                                className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                             >
-                              <Minus className="w-3 h-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium text-sm" aria-live="polite">
-                                {item.quantity}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="h-8 w-8 p-0"
-                              aria-label="Tăng số lượng"
-                            >
-                              <Plus className="w-3 h-3" />
+                                <Trash2 className="w-4 h-4" />
                             </Button>
                         </div>
 
-                         {/* Remove Button */}
-                         <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          aria-label="Xóa sản phẩm"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="text-sm text-gray-500 mt-1 space-y-1">
+                            <p>Phân loại: <span className="font-medium text-gray-700">{item.type === 'custom' ? 'Tự thiết kế (Custom)' : 'Mẫu có sẵn'}</span></p>
+                            <p>
+                                Size: <span className="font-medium text-gray-700">{item.product.size}</span> 
+                                <span className="mx-2 text-gray-300">|</span> 
+                                {item.type === 'custom' ? `Màu: ${item.product.color}` : `Vải: ${item.product.fabric}`}
+                            </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-4">
+                        {/* Quantity Control */}
+                        <div className="flex items-center border border-gray-200 rounded-md bg-white shadow-sm">
+                           <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-l-md transition-colors text-gray-600"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="w-10 text-center font-semibold text-sm text-gray-900">
+                                {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-r-md transition-colors text-gray-600"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                        </div>
+                        
+                        {/* Price */}
+                        <div className="text-right">
+                            <p className="text-xs text-gray-400 font-medium">Đơn giá: {formatPrice(item.price)}</p>
+                            <p className="font-bold text-primary text-lg">
+                                {formatPrice(item.price * item.quantity)}
+                            </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -145,7 +181,7 @@ export default function CartPage() {
               ))}
             </div>
             
-            {/* Order Summary */}
+            {/* Order Summary Component */}
             <OrderSummary />
           </div>
         )}

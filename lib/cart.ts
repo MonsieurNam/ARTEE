@@ -155,8 +155,12 @@ export function checkoutCart(): Order | null {
 
   return newOrder;
 }
+
 export function clearCart(): void {
-  localStorage.removeItem(CART_KEY)
+  const data = getUserData();
+  data.activeCart = [];
+  saveUserData(data);
+  window.dispatchEvent(new Event("storage"));
 }
 
 export function getCartCount(): number {

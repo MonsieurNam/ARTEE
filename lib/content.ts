@@ -1,9 +1,9 @@
 // lib/content.ts
 export const HERO_CONTENT = {
   slogan: "SEE. WEAR. LOVE.",
-  subtitle: "Thiết kế áo in theo yêu cầu với công nghệ AR tiên tiến - Nghệ Thuật Sống Động trên Mỗi Chiếc Áo",
+  subtitle: "Sở hữu chiếc áo AR độc bản đầu tiên của bạn. Thiết kế online - May đo kỹ thuật số - Pre-order chỉ với 50k.",
   description:
-    "ARTEE là nơi nghệ thuật gặp gỡ công nghệ AR, biến mỗi chiếc áo thành một tác phẩm sống động. Chúng tôi mang đến trải nghiệm thời trang tương tác – sáng tạo, bền vững và đầy cảm hứng cho khách hàng tại Việt Nam.",
+    "ARTEE kết hợp nghệ thuật thủ công và công nghệ AR tiên tiến. Chúng tôi không bán áo có sẵn, chúng tôi hiện thực hóa ý tưởng của bạn thành tác phẩm thời trang sống động.",
 };
 
 export const BRAND_STORY = {
@@ -11,7 +11,7 @@ export const BRAND_STORY = {
   description: "ARTEE là nền tảng thiết kế áo in theo yêu cầu kết hợp công nghệ AR, tính bền vững và sáng tạo cá nhân.",
   pillars: [
     {
-      title: "Nghệ Thuật Độc Đáo",
+      title: "Nghệ Thuật",
       description: "Mỗi thiết kế đều được thiết kế theo cách bạn muốn, mang đậm dấu ấn cá nhân.",
     },
     {
@@ -91,7 +91,7 @@ export const COLLECTION = {
       name: "Nạp Cảm Hứng",
       description: "Không chỉ là một ly cà phê, đây là nút 'khởi động' cho mọi ý tưởng",
       price: 399000,
-      image: "/cafe_sau.png",
+      image: "/remove_background/coffe_back.png",
       galleryImages: [
         // --- CẬP NHẬT DỮ LIỆU ---
         { id: 1, url: "/remove_background/coffe_front.png", alt: "Nạp Cảm Hứng front view", pose: "front" },
@@ -149,7 +149,7 @@ export const COLLECTION = {
     {
       id: 4,
       name: "Hồi ức đáng nhớ",
-      description: "Nơi lưu giữ và chia sẻ kỉ niệm",
+      description: "Nơi lưu giữ và chia sẻ kỉ niệm quý giá của chính bạn",
       price: 399000,
       image: "/remove_background/custom_back.png",
       galleryImages: [

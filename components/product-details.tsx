@@ -4,10 +4,12 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+// Thêm dòng này vào các import
+import { useAuth } from "@/components/providers/auth-provider"
+import { LogIn } from "lucide-react" // Import thêm icon
 import {
   ShoppingCart,
   Zap,
-  Camera,
   Ruler,
   Star,
   Shield,
@@ -15,7 +17,8 @@ import {
   HeadphonesIcon,
   X,
   Sparkles,
-  RefreshCw, // Icon đã được import
+  RefreshCw,
+  ShieldCheck // Thêm icon ShieldCheck
 } from "lucide-react"
 import type { Product } from "@/lib/content"
 import { useToast } from "@/hooks/use-toast"
@@ -61,8 +64,24 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const fabricPrice = selectedFabric?.price || 0
   const sizePrice = selectedSize?.price || 0
   const unitPrice = product.price + fabricPrice + sizePrice
+  const { user } = useAuth() 
 
   const handleAddToCart = () => {
+    if (!user) {
+      toast({
+        title: "Yêu cầu đăng nhập",
+        description: "Bạn cần đăng nhập để hệ thống ghi nhận đơn Pre-order và bảo hành.",
+        variant: "destructive", // Màu đỏ để gây chú ý
+        action: (
+          <ToastAction altText="Đăng nhập ngay" onClick={() => router.push("/login")}>
+            <div className="flex items-center gap-2">
+                <LogIn className="w-4 h-4" /> Đăng nhập
+            </div>
+          </ToastAction>
+        ),
+      })
+      return; // Dừng lại, không cho thêm vào giỏ
+    }
     try {
       addToCart({
         type: "predesigned" as const,
@@ -76,19 +95,16 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         price: unitPrice,
       })
 
-      // Cập nhật thông báo phù hợp với ngữ cảnh Báo giá
+      // --- CẬP NHẬT THÔNG BÁO ---
       toast({
         title: "Đã thêm vào danh sách báo giá",
-        description: `Bạn đã chọn: ${product.name} (${selectedSize.name}).`,
+        description: `Bạn đã chọn: ${product.name}. Hãy vào danh sách để gửi yêu cầu cọc.`,
         action: (
           <ToastAction altText="Xem danh sách" onClick={() => router.push("/cart")}>
             Xem danh sách
           </ToastAction>
         ),
       })
-      
-      // Xóa dòng router.push("/cart") để người dùng có thể xem thêm sản phẩm khác nếu muốn
-      // router.push("/cart") 
     } catch (error) {
       toast({
         title: "Lỗi",
@@ -100,14 +116,11 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   return (
     <>
-      {/* --- CẤU TRÚC GRID CHÍNH (VẪN 2 CỘT) --- */}
       <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
         
-        {/* === CỘT 1: HÌNH ẢNH VÀ NỘI DUNG (SCROLLABLE) === */}
+        {/* === CỘT 1: HÌNH ẢNH (Giữ nguyên) === */}
         <div className="space-y-8">
-          {/* --- Image Gallery Section --- */}
           <div className="space-y-6">
-            {/* Main Image */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl" />
               <div
@@ -119,7 +132,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   alt={product.name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
-                {/* AR Ready Badge */}
                 {product.isARReady && (
                   <div
                     className="absolute top-6 right-6 bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border-primary/20 cursor-pointer"
@@ -135,7 +147,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 )}
               </div>
             </div>
-            {/* Thumbnail Gallery */}
             <div className="grid grid-cols-4 gap-3">
               {product.galleryImages.map((img) => (
                 <button
@@ -160,7 +171,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
           
-          {/* --- Header & Description --- */}
           <div className="space-y-4">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -169,10 +179,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 </h1>
                 <div className="flex items-center gap-2">
                   {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 fill-primary text-primary"
-                    />
+                    <Star key={i} className="w-4 h-4 fill-primary text-primary" />
                   ))}
                   <span className="text-sm text-muted-foreground ml-2">
                     (4.9/5 từ 127 đánh giá)
@@ -185,7 +192,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </p>
           </div>
 
-          {/* --- Design Story Card --- */}
           <Card className="p-6 bg-gradient-to-br from-secondary/30 to-secondary/10 border-primary/10 shadow-lg backdrop-blur-sm">
             <div className="flex items-start gap-3">
               <div className="w-1 h-12 bg-gradient-to-b from-primary to-primary/30 rounded-full" />
@@ -200,19 +206,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </Card>
 
-          {/* --- Luxury Features --- */}
           <div className="grid grid-cols-2 gap-4 pt-6 border-t-2 border-neutral-200">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-green-50 to-transparent">
               <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                 <Truck className="w-5 h-5 text-green-600" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Miễn phí vận chuyển
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Đơn hàng trên 500K
-                </p>
+                <p className="text-sm font-semibold text-foreground">Giao hàng & COD</p>
+                <p className="text-xs text-muted-foreground">Toàn quốc</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-blue-50 to-transparent">
@@ -220,43 +221,17 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 <Shield className="w-5 h-5 text-blue-600" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Đảm bảo chất lượng
-                </p>
-                <p className="text-xs text-muted-foreground">100% chính hãng</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-purple-50 to-transparent">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <HeadphonesIcon className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Hỗ trợ 24/7
-                </p>
-                <p className="text-xs text-muted-foreground">Luôn sẵn sàng</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-br from-amber-50 to-transparent">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                <Star className="w-5 h-5 text-amber-600 fill-amber-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Đánh giá cao
-                </p>
-                <p className="text-xs text-muted-foreground">4.9/5 sao</p>
+                <p className="text-sm font-semibold text-foreground">Bảo hành in ấn</p>
+                <p className="text-xs text-muted-foreground">1 đổi 1 nếu lỗi</p>
               </div>
             </div>
           </div>
         </div>
-        {/* === KẾT THÚC CỘT 1 === */}
 
-
-        {/* === CỘT 2: BẢNG ĐIỀU KHIỂN (STICKY) === */}
+        {/* === CỘT 2: BẢNG ĐIỀU KHIỂN === */}
         <div className="space-y-8 lg:sticky top-24 h-fit">
           
-          {/* --- Fabric Selection --- */}
+          {/* Fabric */}
           <div className="space-y-4">
             <label className="block text-sm font-bold text-foreground uppercase tracking-wide">
               Chọn loại vải
@@ -274,24 +249,15 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div
-                        className={`w-3 h-3 rounded-full transition-all ${
-                          selectedFabric.id === fabric.id
-                            ? "bg-primary scale-110"
-                            : "bg-neutral-300 group-hover:bg-primary/50"
+                      <div className={`w-3 h-3 rounded-full transition-all ${
+                          selectedFabric.id === fabric.id ? "bg-primary scale-110" : "bg-neutral-300 group-hover:bg-primary/50"
                         }`}
                       />
-                      <span className="font-semibold text-foreground">
-                        {fabric.name}
-                      </span>
+                      <span className="font-semibold text-foreground">{fabric.name}</span>
                     </div>
                     {fabric.price > 0 && (
                       <span className="text-sm font-medium text-primary">
-                        +
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(fabric.price)}
+                        +{new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(fabric.price)}
                       </span>
                     )}
                   </div>
@@ -300,7 +266,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
 
-          {/* --- Size Selection --- */}
+          {/* Size */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <label className="block text-sm font-bold text-foreground uppercase tracking-wide">
@@ -332,7 +298,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
 
-          {/* --- Quantity Selector --- */}
+          {/* Quantity */}
           <div className="space-y-4">
             <label className="block text-sm font-bold text-foreground uppercase tracking-wide">
               Số lượng
@@ -356,51 +322,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </div>
           </div>
 
-          {/* --- Price Summary --- */}
+          {/* Price Summary */}
           <Card className="p-6 bg-gradient-to-br from-neutral-50 to-white border-2 border-neutral-200 shadow-xl space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground font-medium">
-                Giá cơ bản
-              </span>
-              <span className="text-foreground font-semibold">
-                {new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(product.price)}
-              </span>
-            </div>
-            {fabricPrice > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground font-medium">
-                  Vải nâng cấp
-                </span>
-                <span className="text-primary font-semibold">
-                  +
-                  {new Intl.NumberFormat("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  }).format(fabricPrice)}
-                </span>
-              </div>
-            )}
-            {sizePrice > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground font-medium">
-                  Kích cỡ lớn
-                </span>
-                <span className="text-primary font-semibold">
-                  +
-                  {new Intl.NumberFormat("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  }).format(sizePrice)}
-                </span>
-              </div>
-            )}
             <div className="border-t-2 border-neutral-200 pt-3 flex justify-between items-center">
-              <span className="font-bold text-foreground text-lg">
-                Tạm tính
-              </span>
+              <span className="font-bold text-foreground text-lg">Tạm tính</span>
               <span className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                 {new Intl.NumberFormat("vi-VN", {
                   style: "currency",
@@ -409,20 +334,35 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               </span>
             </div>
             <p className="text-xs text-center text-muted-foreground italic pt-1">
-              *Giá cuối cùng và phí vận chuyển sẽ được chốt khi tư vấn.
+              *Giá chưa bao gồm phí vận chuyển.
             </p>
           </Card>
 
-          {/* --- Add to Cart Button --- */}
-          <Button
-            onClick={handleAddToCart}
-            className="w-full gap-3 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white py-7 text-lg font-bold shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02] rounded-xl"
-          >
-            <ShoppingCart className="w-6 h-6" />
-            Thêm vào danh sách báo giá
-          </Button>
+          {/* --- CẬP NHẬT NÚT ADD TO CART --- */}
+          <div>
+            <Button
+              onClick={handleAddToCart}
+              // Đổi màu style sang tông xanh đậm tin cậy hơn
+              className="w-full gap-3 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white py-7 text-lg font-bold shadow-xl shadow-blue-900/20 transition-all duration-300 hover:scale-[1.02] rounded-xl"
+            >
+              <ShoppingCart className="w-6 h-6" />
+              Đăng Ký Pre-order (Cọc 50k)
+            </Button>
+            
+            {/* Thêm đoạn Disclaimer (Cam kết) mới ngay bên dưới nút */}
+            <div className="flex flex-col gap-1 mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                <div className="flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                    <p className="text-xs font-bold text-blue-800 uppercase">Cam kết chất lượng</p>
+                </div>
+                <p className="text-xs text-center text-blue-600/80 leading-relaxed">
+                    Chúng tôi sẽ liên hệ Zalo để chốt size và mẫu in trước khi sản xuất. <br/>
+                    Bạn chỉ cần <strong>cọc 50k</strong>, phần còn lại thanh toán khi nhận hàng.
+                </p>
+            </div>
+          </div>
+          {/* --- KẾT THÚC PHẦN SỬA --- */}
 
-          {/* --- VTO Button --- */}
           <Button
             onClick={() => setIsVtoModalOpen(true)}
             variant="secondary"
@@ -433,8 +373,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           </Button>
 
         </div>
-        {/* === KẾT THÚC CỘT 2 === */}
-
       </div>
 
       {/* --- CÁC MODAL --- */}
@@ -466,7 +404,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   )
 }
 
-/// Component ImageZoomModal (Đã sửa lỗi lệch phải bằng !important)
 interface ImageZoomModalProps {
   isOpen: boolean
   onClose: () => void
@@ -475,108 +412,31 @@ interface ImageZoomModalProps {
 }
 
 function ImageZoomModal({ isOpen, onClose, imageUrl, productId }: ImageZoomModalProps) {
-
-  // ID 2 = Nạp Cảm Hứng, ID 4 = Hồi ức đáng nhớ
   const isLightBg = ( productId === 4 || productId === 3);
-  
   const overlayClass = "bg-black/80 backdrop-blur-sm";
-    
   const contentBgClass = isLightBg ? "bg-white" : "bg-transparent";
-
-  const controlButtonClass = isLightBg
-    ? "text-black hover:bg-black/20"
-    : "text-white hover:bg-white/20";
-    
-  const closeButtonClass = isLightBg
-    ? "bg-black/30 text-white/80"
-    : "bg-white/30 text-white/80";
+  const controlButtonClass = isLightBg ? "text-black hover:bg-black/20" : "text-white hover:bg-white/20";
+  const closeButtonClass = isLightBg ? "bg-black/30 text-white/80" : "bg-white/30 text-white/80";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogOverlay className={overlayClass} />
-      
-      {/* THAY ĐỔI CHÍNH: Thêm các tiền tố '!' 
-        để ép ghi đè CSS mặc định của shadcn/ui.
-      */}
-      <DialogContent 
-        className={`
-          fixed inset-0 
-          !w-full !h-full !max-w-none 
-          p-0 border-0 shadow-none 
-          !left-0 !top-0 !translate-x-0 !translate-y-0 
-          ${contentBgClass}
-        `}
-      >
+      <DialogContent className={`fixed inset-0 !w-full !h-full !max-w-none p-0 border-0 shadow-none !left-0 !top-0 !translate-x-0 !translate-y-0 ${contentBgClass}`}>
         <DialogTitle className="sr-only">Phóng to ảnh sản phẩm</DialogTitle>
-        <TransformWrapper
-          initialScale={1}
-          minScale={0.5}
-          maxScale={4}
-          wheel={{ step: 0.2 }}
-          pinch={{ disabled: false }}
-          panning={{ disabled: false }}
-          limitToBounds={true}
-          doubleClick={{ disabled: true }}
-        >
-          {({ zoomIn, zoomOut, resetTransform, ...rest }) => (
+        <TransformWrapper initialScale={1} minScale={0.5} maxScale={4} wheel={{ step: 0.2 }} pinch={{ disabled: false }} panning={{ disabled: false }} limitToBounds={true} doubleClick={{ disabled: true }}>
+          {({ zoomIn, zoomOut, resetTransform }) => (
             <>
-              {/* Thanh control */}
               <div className="absolute top-4 right-20 z-10 flex gap-2 p-2 rounded-full bg-black/50 backdrop-blur-md">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => zoomIn()}
-                  className={controlButtonClass}
-                >
-                  <span className="sr-only">Zoom In</span>+
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => zoomOut()}
-                  className={controlButtonClass}
-                >
-                  <span className="sr-only">Zoom Out</span>-
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => resetTransform()}
-                  className={controlButtonClass}
-                >
-                  <span className="sr-only">Reset Zoom</span>
-                  <RefreshCw className="w-5 h-5" />
-                </Button>
+                <Button variant="ghost" size="icon" onClick={() => zoomIn()} className={controlButtonClass}><span className="sr-only">Zoom In</span>+</Button>
+                <Button variant="ghost" size="icon" onClick={() => zoomOut()} className={controlButtonClass}><span className="sr-only">Zoom Out</span>-</Button>
+                <Button variant="ghost" size="icon" onClick={() => resetTransform()} className={controlButtonClass}><span className="sr-only">Reset Zoom</span><RefreshCw className="w-5 h-5" /></Button>
               </div>
-
-              {/* "Canvas" (TransformComponent) */}
-              <TransformComponent
-                wrapperStyle={{
-                  width: "92%", 
-                  height: "100%",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-                contentStyle={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                {/* Ảnh */}
-                <img
-                  src={imageUrl}
-                  alt="Product Zoom"
-                  className="max-w-full max-h-[95vh] object-contain rounded-lg shadow-lg cursor-grab"
-                  style={{ userSelect: "none" }}
-                />
+              <TransformComponent wrapperStyle={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }} contentStyle={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <img src={imageUrl} alt="Product Zoom" className="max-w-full max-h-[95vh] object-contain rounded-lg shadow-lg cursor-grab" style={{ userSelect: "none" }} />
               </TransformComponent>
             </>
           )}
         </TransformWrapper>
-
-        {/* Nút đóng */}
         <DialogClose className={`absolute top-4 right-4 rounded-full p-2 opacity-80 hover:opacity-100 transition-all backdrop-blur-md z-20 ${closeButtonClass}`}>
           <X className="w-5 h-5" />
         </DialogClose>

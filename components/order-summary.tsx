@@ -1,19 +1,19 @@
-// components/order-summary.tsx
 "use client"
 
 import { useCart } from "@/hooks/use-cart"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { SHOP_CONTACT, PRODUCT_NAMES } from "@/lib/constants"
-import { MessageCircle, Phone, Copy, Check, Loader2, LogIn } from "lucide-react"
+import { SHOP_CONTACT, DEPOSIT_AMOUNT } from "@/lib/constants"
+import { MessageCircle, Phone, ArrowRight, ShieldCheck, Loader2, LogIn, CreditCard } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/providers/auth-provider"
 import { useRouter } from "next/navigation"
 import { createOrder } from "@/lib/services/order-service"
 import { clearCart } from "@/lib/cart"
+import PaymentModal from "./payment-modal" // <--- Import Modal vừa tạo
 
-// Hàm format giá tiền
+// Hàm format tiền tệ
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -22,57 +22,39 @@ const formatPrice = (price: number) => {
 }
 
 export default function OrderSummary() {
-  const { cart, getTotalPrice } = useCart() // Cần thêm hàm clearCart vào hook useCart sau
+  const { cart, getTotalPrice } = useCart()
   const { toast } = useToast()
   const { user } = useAuth()
   const router = useRouter()
   
-  const [isCopied, setIsCopied] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  // State quản lý Modal thanh toán
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [createdOrderId, setCreatedOrderId] = useState<string>("")
 
-  // Nếu giỏ hàng trống, không hiển thị gì cả
-  if (!cart || cart.length === 0) {
-    return null;
+  // Nếu giỏ hàng trống, không hiển thị
+  if (!cart || cart.length === 0) return null;
+
+  // --- TÍNH TOÁN TIỀN ---
+  const totalPrice = getTotalPrice();
+  const depositRequired = totalPrice < DEPOSIT_AMOUNT ? totalPrice : DEPOSIT_AMOUNT;
+  const remainingAmount = totalPrice - depositRequired;
+
+  // --- HÀM 1: XỬ LÝ CHAT ZALO (TƯ VẤN) ---
+  const handleChatZalo = () => {
+      // Mở trực tiếp Zalo để chat
+      window.open(SHOP_CONTACT.zalo, '_blank');
   }
 
-  // Hàm tạo nội dung tin nhắn đơn hàng
-  const generateOrderMessage = (orderId?: string) => {
-    let message = `👋 Chào ${SHOP_CONTACT.shopName}, mình muốn đặt đơn hàng${orderId ? ` #${orderId.slice(0,6).toUpperCase()}` : ''}:\n\n`;
-    
-    cart.forEach((item, index) => {
-      let name = "Sản phẩm";
-      let details = "";
-
-      if (item.type === 'custom') {
-        const typeName = item.product.type ? PRODUCT_NAMES[item.product.type] : 'Áo';
-        name = `${typeName} Tự thiết kế`;
-        details = `(Size: ${item.product.size} - Màu: ${item.product.color})`;
-      } else {
-        name = item.product.productName || "Sản phẩm BST";
-        details = `(Size: ${item.product.size} - Vải: ${item.product.fabric})`;
-      }
-        
-      message += `${index + 1}. ${name}\n   ${details}\n   SL: ${item.quantity} x ${formatPrice(item.price)}\n\n`;
-    });
-
-    message += `💰 Tổng tạm tính: ${formatPrice(getTotalPrice())}`;
-    message += `\n\nShop kiểm tra và báo giá phí vận chuyển giúp mình nhé!`;
-    
-    return message;
-  };
-
-  // Hàm xử lý chính: Lưu đơn -> Copy -> Mở Zalo
-  const handleCheckout = async () => {
+  // --- HÀM 2: XỬ LÝ NÚT "CỌC NGAY" ---
+  const handleDepositClick = async () => {
     // 1. Kiểm tra đăng nhập
     if (!user) {
       toast({
         title: "Yêu cầu đăng nhập",
-        description: "Vui lòng đăng nhập để chúng tôi lưu đơn hàng của bạn.",
-        action: (
-          <Button size="sm" variant="outline" onClick={() => router.push("/login")}>
-            Đăng nhập ngay
-          </Button>
-        ),
+        description: "Vui lòng đăng nhập để tạo đơn hàng và bảo hành.",
+        action: (<Button size="sm" variant="outline" onClick={() => router.push("/login")}>Đăng nhập</Button>),
       });
       return;
     }
@@ -80,113 +62,138 @@ export default function OrderSummary() {
     setIsProcessing(true);
 
     try {
-      // 2. Lưu đơn hàng vào Firestore
-      const totalAmount = getTotalPrice();
-      // Gọi service tạo đơn hàng
-      const orderId = await createOrder(user.uid, cart, totalAmount);
-
-      // 3. Tạo nội dung tin nhắn (kèm mã đơn hàng vừa tạo)
-      const message = generateOrderMessage(orderId);
+      // 2. Tạo đơn hàng trước trên Firestore (Trạng thái Pending)
+      const orderId = await createOrder(user.uid, cart, totalPrice);
+      setCreatedOrderId(orderId);
       
-      // Copy vào clipboard
-      await navigator.clipboard.writeText(message);
-      
-      toast({
-        title: "Đơn hàng đã được lưu! ✅",
-        description: "Nội dung đã được sao chép. Đang mở Zalo để gửi cho Shop...",
-      });
-
-      // 4. Mở Zalo và Chuyển hướng
-      setTimeout(() => {
-        // Mở Zalo trong tab mới
-        window.open(SHOP_CONTACT.zalo, '_blank');
-        
-        clearCart();
-        router.push("/orders"); 
-      }, 1500);
+      // 3. Mở Modal thanh toán QR
+      setShowPaymentModal(true);
 
     } catch (error) {
-      console.error(error);
-      toast({ 
-        title: "Lỗi hệ thống", 
-        description: "Không thể tạo đơn hàng. Vui lòng thử lại.", 
-        variant: "destructive" 
-      });
+      console.error("Create Order Error:", error);
+      toast({ title: "Lỗi hệ thống", description: "Không thể tạo đơn hàng. Vui lòng thử lại.", variant: "destructive" });
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Hàm phụ: Chỉ copy (dành cho người không dùng Zalo)
-  const handleCopyOnly = () => {
-    const message = generateOrderMessage();
-    navigator.clipboard.writeText(message);
-    setIsCopied(true);
-    toast({ title: "Đã sao chép", description: "Bạn có thể gửi qua Messenger hoặc Email." });
-    setTimeout(() => setIsCopied(false), 2000);
-  };
+  // --- HÀM 3: XÁC NHẬN ĐÃ THANH TOÁN (Callback từ Modal) ---
+  const handlePaymentSuccess = () => {
+      setShowPaymentModal(false);
+      clearCart(); // Xóa giỏ hàng sau khi đã tạo đơn và thanh toán
+      
+      toast({ 
+        title: "Đặt hàng thành công! 🎉", 
+        description: "Cảm ơn bạn đã thanh toán cọc. Đơn hàng đang được xử lý.",
+        duration: 5000
+      });
+      
+      router.push("/orders"); // Chuyển hướng về trang lịch sử đơn hàng
+  }
 
   return (
     <div className="lg:col-span-1">
-      <Card className="p-6 sticky top-24 border-2 border-primary/20 bg-gradient-to-br from-white to-primary/5 shadow-xl">
-        <div className="mb-6 pb-4 border-b border-border/50">
-          <h2 className="text-xl font-bold text-foreground tracking-tight">Tổng đơn hàng dự kiến</h2>
+      <Card className="p-6 sticky top-24 border-2 border-primary/10 bg-white shadow-xl rounded-xl overflow-hidden">
+        {/* Header trang trí */}
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+        
+        <div className="mb-6 pb-2 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                Tổng kết Báo giá
+            </h2>
         </div>
 
-        <div className="flex justify-between items-baseline mb-2">
-          <span className="text-muted-foreground font-medium">Tạm tính:</span>
-          <span className="text-2xl font-bold text-primary">
-            {formatPrice(getTotalPrice())}
-          </span>
+        {/* --- PHẦN HIỂN THỊ TIỀN --- */}
+        <div className="space-y-4 mb-8">
+            {/* Tổng đơn hàng */}
+            <div className="flex justify-between items-baseline text-sm text-gray-500">
+                <span>Tổng giá trị đơn hàng:</span>
+                <span className="font-medium text-gray-600 line-through decoration-gray-400 decoration-1">{formatPrice(totalPrice)}</span>
+            </div>
+            
+            {/* DÒNG CỌC (Nổi bật) */}
+            <div className="relative overflow-hidden rounded-xl border-2 border-blue-100 bg-blue-50/50 p-4 shadow-sm">
+                <div className="flex justify-between items-center relative z-10">
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1 flex items-center gap-1">
+                           <ShieldCheck className="w-3 h-3" /> Cần thanh toán ngay
+                        </span>
+                        <span className="font-bold text-blue-900 text-sm">Tiền cọc Pre-order</span>
+                    </div>
+                    <span className="text-3xl font-bold text-blue-700 tracking-tight">{formatPrice(depositRequired)}</span>
+                </div>
+                {/* Hiệu ứng nền nhẹ */}
+                <div className="absolute -right-6 -top-6 w-20 h-20 bg-blue-200 rounded-full opacity-20 blur-xl" />
+            </div>
+
+            {/* Dòng COD */}
+            <div className="flex justify-between items-baseline pt-3 border-t border-dashed border-gray-200 text-sm">
+                <span className="text-gray-600 flex items-center gap-2">
+                    📦 Thanh toán khi nhận hàng (COD):
+                </span>
+                <span className="font-bold text-gray-900">{formatPrice(remainingAmount)}</span>
+            </div>
+        </div>
+
+        {/* --- NÚT HÀNH ĐỘNG (ĐÃ TÁCH) --- */}
+        <div className="space-y-3 pt-4 border-t border-gray-100">
+            
+            {/* Nút 1: Cọc ngay (Primary) */}
+            <Button 
+                onClick={handleDepositClick}
+                disabled={isProcessing}
+                className="w-full py-6 text-base font-bold bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-xl transition-all hover:scale-[1.02]"
+            >
+                {isProcessing ? (
+                    <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Đang khởi tạo...</>
+                ) : user ? (
+                    <span className="flex items-center">
+                        <CreditCard className="w-5 h-5 mr-2" /> Đặt Cọc Ngay ({formatPrice(depositRequired)})
+                    </span>
+                ) : (
+                    <span className="flex items-center">
+                        <LogIn className="w-5 h-5 mr-2" /> Đăng nhập để Đặt cọc
+                    </span>
+                )}
+            </Button>
+
+            {/* Nút 2: Tư vấn Zalo (Secondary) */}
+            <Button 
+                onClick={handleChatZalo}
+                variant="outline"
+                className="w-full py-6 text-blue-700 border-blue-200 hover:bg-blue-50 hover:border-blue-300 font-semibold rounded-xl"
+            >
+                <MessageCircle className="w-5 h-5 mr-2" /> 
+                Chưa rõ size? Chat Zalo Tư Vấn
+            </Button>
+
+            <p className="text-[11px] text-center text-gray-400 mt-2 italic">
+                *Quét mã QR VietQR - Xác nhận tự động - An toàn tuyệt đối
+            </p>
         </div>
         
-        <p className="text-xs text-muted-foreground mb-6 italic">
-          *Chưa bao gồm phí vận chuyển.
-        </p>
-
-        <div className="space-y-3">
-          {/* Nút chính: Checkout */}
-          <Button 
-            onClick={handleCheckout} 
-            disabled={isProcessing}
-            className="w-full py-6 text-base font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-blue-600/30 transition-all duration-300 hover:-translate-y-0.5"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Đang xử lý...
-              </>
-            ) : user ? (
-              <>
-                <MessageCircle className="w-5 h-5 mr-2" /> Gửi đơn qua Zalo
-              </>
-            ) : (
-              <>
-                <LogIn className="w-5 h-5 mr-2" /> Đăng nhập để gửi đơn
-              </>
-            )}
-          </Button>
-
-          {/* Nút phụ: Copy */}
-          <Button 
-            onClick={handleCopyOnly} 
-            variant="outline" 
-            className="w-full border-dashed border-2"
-          >
-            {isCopied ? <Check className="w-4 h-4 mr-2 text-green-600" /> : <Copy className="w-4 h-4 mr-2" />}
-            {isCopied ? "Đã sao chép" : "Sao chép nội dung"}
-          </Button>
-          
-          <div className="pt-4 mt-4 border-t border-border/50 text-center">
-            <p className="text-sm text-muted-foreground mb-2">Cần hỗ trợ gấp?</p>
-            <Button asChild variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/10">
-                <a href={`tel:${SHOP_CONTACT.phone}`} className="flex items-center gap-2 font-semibold text-lg">
-                  <Phone className="w-5 h-5" />
-                  {SHOP_CONTACT.phone}
+        {/* Support Link */}
+        <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+            <Button variant="link" asChild className="text-gray-500 p-0 h-auto text-xs hover:text-blue-600">
+                <a href={`tel:${SHOP_CONTACT.phone}`} className="flex items-center justify-center gap-1">
+                  <Phone className="w-3 h-3" />
+                  Gặp vấn đề thanh toán? Gọi {SHOP_CONTACT.phone}
                 </a>
             </Button>
-          </div>
         </div>
       </Card>
+
+      {/* --- RENDER MODAL THANH TOÁN --- */}
+      {showPaymentModal && (
+          <PaymentModal 
+            isOpen={showPaymentModal}
+            onClose={() => setShowPaymentModal(false)}
+            amount={depositRequired}
+            orderId={createdOrderId}
+            userEmail={user?.email || "Khách vãng lai"}
+            onConfirm={handlePaymentSuccess}
+          />
+      )}
     </div>
   )
 }
