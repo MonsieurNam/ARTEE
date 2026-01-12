@@ -1,12 +1,10 @@
-// components/consultation-modal.tsx
 "use client"
 
 import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
+  DialogTitle, // <--- 1. THÊM IMPORT NÀY
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { X, MessageCircle } from "lucide-react"
@@ -16,11 +14,11 @@ export default function ConsultationModal() {
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    // 1. Kiểm tra xem khách đã từng đóng popup này chưa (để tránh làm phiền)
+    // 1. Kiểm tra xem khách đã từng đóng popup này chưa
     const hasSeenPopup = sessionStorage.getItem("has_seen_consultation_popup")
     
     if (!hasSeenPopup) {
-      // 2. Nếu chưa, hiện popup sau 15 giây
+      // 2. Hiện popup sau 15 giây
       const timer = setTimeout(() => {
         setIsOpen(true)
       }, 15000) 
@@ -31,7 +29,6 @@ export default function ConsultationModal() {
 
   const handleClose = () => {
     setIsOpen(false)
-    // Lưu lại trạng thái đã xem vào Session (Tắt tab mở lại mới hiện lại)
     sessionStorage.setItem("has_seen_consultation_popup", "true")
   }
 
@@ -42,18 +39,13 @@ export default function ConsultationModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      {/* 
-         LƯU Ý: showCloseButton={false} để tắt nút X mặc định của thư viện
-         để ta dùng nút X custom đẹp hơn bên dưới 
-      */}
       <DialogContent 
         className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl bg-white" 
         showCloseButton={false} 
       >
         <div className="flex flex-col md:flex-row">
-            {/* Cột trái: Branding & Trust */}
+            {/* Cột trái */}
             <div className="md:w-2/5 bg-gradient-to-br from-blue-700 to-blue-900 p-6 flex flex-col justify-center items-center text-center text-white relative overflow-hidden">
-                {/* Background noise effect */}
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
                 
                 <div className="relative z-10 w-14 h-14 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center mb-4 border border-white/20">
@@ -63,9 +55,8 @@ export default function ConsultationModal() {
                 <p className="relative z-10 text-xs text-blue-200 mt-2">Hỗ trợ trực tiếp 1:1</p>
             </div>
 
-            {/* Cột phải: Nội dung Action */}
+            {/* Cột phải */}
             <div className="md:w-3/5 p-6 relative">
-                {/* Nút X tự làm */}
                 <button 
                     onClick={handleClose}
                     className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 text-gray-400 transition-colors z-20"
@@ -74,9 +65,10 @@ export default function ConsultationModal() {
                 </button>
 
                 <div className="mt-1">
-                    <h2 className="text-lg font-bold text-gray-900 leading-snug">
+                    {/* --- 2. SỬA TẠI ĐÂY: Dùng DialogTitle thay cho h2 --- */}
+                    <DialogTitle className="text-lg font-bold text-gray-900 leading-snug">
                         Bạn muốn xem ảnh thực tế chất vải?
-                    </h2>
+                    </DialogTitle>
                     
                     <div className="mt-4 space-y-3">
                         <p className="text-sm text-gray-600">
@@ -109,10 +101,10 @@ export default function ConsultationModal() {
                             </p>
                         </div>
                     </div>
-                  </div>
-              </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
+                </div>
+            </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

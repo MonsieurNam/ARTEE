@@ -7,6 +7,7 @@ import HowItWorksSection from "@/components/how-it-works-section"
 import FinalCtaSection from "@/components/final-cta-section"
 import Link from "next/link"
 import TechShowcaseSection from "@/components/tech-showcase-section" // 1. IMPORT
+import ArFeatureSection from "@/components/ar-feature-section"
 
 export default function Home() {
   return (
@@ -14,6 +15,7 @@ export default function Home() {
       <Header />
       <HeroSection />
       <TechShowcaseSection /> 
+      <ArFeatureSection /> 
       <BrandStorySection />
       <CollectionSection />
       <FinalCtaSection />
